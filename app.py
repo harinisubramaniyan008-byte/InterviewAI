@@ -13,24 +13,22 @@ except:
     st.error("GROQ_API_KEY missing in Secrets")
     st.stop()
 
-# 2. File read panna function
+# 2. File read panna function - pdfplumber version
 def read_file(uploaded_file):
+    text = ""
     if uploaded_file.type == "application/pdf":
-        pdf_reader = PyPDF2.PdfReader(uploaded_file)
-        text = ""
-        for page in pdf_reader.pages:
-            text += page.extract_text()
-        return text
+        with pdfplumber.open(uploaded_file) as pdf:
+            for page in pdf.pages:
+                text += page.extract_text() + "\n"
     elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
         doc = docx.Document(uploaded_file)
-        text = ""
         for para in doc.paragraphs:
             text += para.text + "\n"
-        return text
     else:
-        return uploaded_file.read().decode("utf-8")
+        text = uploaded_file.read().decode("utf-8")
+    return text
 
-# 3. Input - Upload + Text area rendu um
+# 3. Input - Upload + Text area
 col1, col2 = st.columns(2)
 with col1:
     st.subheader("📄 Resume")
@@ -57,7 +55,6 @@ if st.button("🚀 Analyze with 15 Models", type="primary", use_container_width=
             Job: {job_desc}
 
             ### 1. OVERALL SCORE
-            Score: XX/100 with 2 line reason
             ### 2. ATS KEYWORD MATCH
             ### 3. SKILLS GAP ANALYSIS
             ### 4. EXPERIENCE FIT SCORE
