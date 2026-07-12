@@ -2,9 +2,12 @@ streamlit
 pandas
 scikit-learn
 numpy
-Pdfplumber
+pdfplumber
 python-docx
 mysql-connector-python
 groq
 flask
 reportlab
+plotly
+python-dotenv
+google-generativeai
