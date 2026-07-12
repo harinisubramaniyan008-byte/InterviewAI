@@ -15,47 +15,55 @@ except:
     st.error("⚠️ Settings > Secrets la GROQ_API_KEY podu da")
     st.stop()
 
-# Session state for data
+# Session state
 if 'analysis_done' not in st.session_state:
     st.session_state.analysis_done = False
     st.session_state.data = {}
 
-# File read function
+# File read function - strong version
 def read_file(uploaded_file):
     text = ""
     if uploaded_file is None:
         return ""
-    if uploaded_file.type == "application/pdf":
-        with pdfplumber.open(uploaded_file) as pdf:
-            for page in pdf.pages:
-                if page.extract_text():
-                    text += page.extract_text() + "\n"
-    elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-        doc = docx.Document(uploaded_file)
-        for para in doc.paragraphs:
-            text += para.text + "\n"
-    else:
-        text = uploaded_file.read().decode("utf-8", errors='ignore')
+    try:
+        if uploaded_file.type == "application/pdf":
+            with pdfplumber.open(uploaded_file) as pdf:
+                for page in pdf.pages:
+                    if page.extract_text():
+                        text += page.extract_text() + "\n"
+        elif uploaded_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
+            doc = docx.Document(uploaded_file)
+            for para in doc.paragraphs:
+                text += para.text + "\n"
+        else:
+            text = uploaded_file.read().decode("utf-8", errors='ignore')
+    except Exception as e:
+        st.error(f"File padika mudiyala: {e}")
+
+    if text.strip() == "":
+        st.warning(f"⚠️ {uploaded_file.name} la text illa. Scan panna PDF ah irukum")
     return text
 
-# 1. FIRST: Upload Section - Mela ve irukum
+# 1. FIRST: Upload Section ONLY
 st.markdown("### 📤 Step 1: Resume & JD Upload Pannu")
 col1, col2 = st.columns(2)
 with col1:
     resume_file = st.file_uploader("1. Resume Upload Pannu", type=['pdf', 'docx', 'txt'], key="resume_upload")
-    resume_text_area = st.text_area("Illa na Paste Pannu", height=150, key="resume_paste")
-    resume_text = read_file(resume_file) if resume_file else resume_text_area
+    resume_text = read_file(resume_file)
     if resume_file: st.success(f"✅ {resume_file.name}")
 
 with col2:
     job_file = st.file_uploader("2. JD Upload Pannu", type=['pdf', 'docx', 'txt'], key="jd_upload")
-    job_text_area = st.text_area("JD Paste Pannu", height=150, key="jd_paste")
-    job_desc = read_file(job_file) if job_file else job_text_area
+    job_desc = read_file(job_file)
     if job_file: st.success(f"✅ {job_file.name}")
 
 if st.button("🚀 Step 2: 19 Models oda Analyze Pannu", type="primary", use_container_width=True):
-    if resume_text.strip() and job_desc.strip():
-        with st.spinner("19 AI Models ellam tab um fill panradhuku scanning..."):
+    if resume_text.strip() == "":
+        st.error("⚠️ Resume upload pannu da")
+    elif job_desc.strip() == "":
+        st.error("⚠️ JD upload pannu da")
+    else:
+        with st.spinner("19 AI Models ellam tab um fill panradhuku scanning... 30 sec"):
             prompt = f"""
             You are 19 HR experts. Based on this Resume and JD, return ONLY valid JSON.
 
@@ -64,14 +72,14 @@ if st.button("🚀 Step 2: 19 Models oda Analyze Pannu", type="primary", use_con
 
             Return JSON with this structure:
             {{
-                "location_alert": [{{"Company":"TCS","Role":"Data Analyst","Openings":10}}, {{}}],
+                "location_alert": [{{"Company":"TCS","Role":"Data Analyst","Openings":12}}, {{"Company":"Zoho","Role":"Data Analyst","Openings":5}}, {{"Company":"Freshworks","Role":"Data Analyst","Openings":8}}],
                 "fit_score": 85,
-                "fit_feedback": "Python match aagudhu",
-                "companies": [{{"Company":"Zoho","Match":90,"Reason":"Skills match"}}],
+                "fit_feedback": "Python and SQL skills match aagudhu. Excel konjam improve pannanum",
+                "companies": [{{"Company":"Zoho","Match":90,"Reason":"Skills 90% match"}}, {{"Company":"TCS","Match":82,"Reason":"Experience fit"}}],
                 "salary": {{"Role":"Data Analyst","Min":6,"Max":12,"Avg":8.5}},
-                "internships": [{{"Company":"Freshworks","Role":"Intern","Duration":"3 months"}}],
-                "interview_q": ["Q1","Q2","Q3","Q4","Q5"],
-                "match_details": "Detailed 19 point analysis here in markdown"
+                "internships": [{{"Company":"Freshworks","Role":"Data Analyst Intern","Duration":"3 months"}}, {{"Company":"Zoho","Role":"BI Intern","Duration":"6 months"}}],
+                "interview_q": ["Tell me about your projects", "Explain SQL join", "Python pandas use pannirukiya", "Why this company", "5 year plan enna"],
+                "match_details": "### 🎯 1. OVERALL ATS SCORE: 85/100\\nStrong match\\n\\n### 📊 2. KEYWORD MATCH\\nMatched: Python, SQL, Excel\\nMissing: Tableau, PowerBI\\n\\n### 💪 3. SKILLS GAP\\nLearn Tableau\\n\\n### 🏆 4-19. Detailed analysis continue..."
             }}
             """
             response = client.chat.completions.create(
@@ -81,13 +89,16 @@ if st.button("🚀 Step 2: 19 Models oda Analyze Pannu", type="primary", use_con
                 temperature=0.2
             )
             try:
-                st.session_state.data = json.loads(response.choices[0].message.content)
+                content = response.choices[0].message.content
+                # JSON extract
+                start = content.find('{')
+                end = content.rfind('}') + 1
+                st.session_state.data = json.loads(content[start:end])
                 st.session_state.analysis_done = True
                 st.rerun()
-            except:
-                st.error("AI response error. Again try pannu")
-    else:
-        st.warning("⚠️ Resume and JD rendu um podu")
+            except Exception as e:
+                st.error(f"AI error: {e}")
+                st.code(response.choices[0].message.content)
 
 st.markdown("---")
 
@@ -99,7 +110,6 @@ with tab1:
     if st.session_state.analysis_done:
         df = pd.DataFrame(st.session_state.data.get("location_alert", []))
         st.dataframe(df, use_container_width=True)
-
         st.header("2. Company Fit Score 🎯")
         score = st.session_state.data.get("fit_score", 0)
         st.progress(score/100)
@@ -119,8 +129,10 @@ with tab3:
     st.header("💰 Salary Benchmark")
     if st.session_state.analysis_done:
         sal = st.session_state.data.get("salary", {})
-        st.metric("Avg Salary LPA", f"{sal.get('Avg',0)} LPA")
-        st.write(f"Range: {sal.get('Min',0)} - {sal.get('Max',0)} LPA")
+        c1,c2,c3 = st.columns(3)
+        c1.metric("Min", f"{sal.get('Min',0)} LPA")
+        c2.metric("Avg", f"{sal.get('Avg',0)} LPA")
+        c3.metric("Max", f"{sal.get('Max',0)} LPA")
     else:
         st.info("First upload pannu")
 
@@ -136,7 +148,7 @@ with tab5:
     st.header("❓ Predicted Interview Questions")
     if st.session_state.analysis_done:
         for i,q in enumerate(st.session_state.data.get("interview_q", [])):
-            st.write(f"{i+1}. {q}")
+            st.write(f"**{i+1}.** {q}")
     else:
         st.info("First upload pannu")
 
@@ -151,6 +163,6 @@ with tab7:
     st.header("🔔 Smart Alerts")
     if st.session_state.analysis_done:
         st.success("✅ Unga profile ku 3 new jobs match aagudhu")
-        st.warning("⚠️ Excel skill konjam improve pannanum")
+        st.warning("⚠️ Tableau skill add pannuna 95% pogum")
     else:
         st.info("First upload pannu")
