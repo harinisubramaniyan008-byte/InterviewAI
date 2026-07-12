@@ -1,6 +1,6 @@
 import streamlit as st
 from groq import Groq
-import PyPDF2
+import pdfplumber
 import docx
 
 st.set_page_config(page_title="AI Career Coach Pro", layout="wide")
