@@ -3,8 +3,31 @@ import pdfplumber
 import docx
 from groq import Groq
 import json
+import time
 
 st.set_page_config(page_title="AI Career Coach Pro", page_icon="🚀", layout="wide")
+
+# CSS for animation and cards
+st.markdown("""
+<style>
+   .metric-card {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 20px;
+        border-radius: 15px;
+        color: white;
+        text-align: center;
+        box-shadow: 0 4px 15px 0 rgba(31, 38, 135, 0.2);
+    }
+   .tab-content {
+        animation: fadeIn 0.5s;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
+""", unsafe_allow_html=True)
+
 client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 
 def extract_text(uploaded_file):
@@ -20,35 +43,35 @@ def extract_text(uploaded_file):
     return text
 
 st.title("🚀 AI Career Coach Pro")
-st.caption("Upload once. Get Score, Feedback, Interview Prep, Skill Gap - Everything")
+st.caption("Upload pannunga... AI ungaluku offer letter varaikum guide panum")
 
-uploaded_file = st.file_uploader("📤 Upload Your Resume", type=["pdf", "docx", "txt"])
-job_desc = st.text_area("🎯 Paste Target Job Description - Optional but powerful", height=100)
+uploaded_file = st.file_uploader("📤 Drag & Drop Your Resume Here", type=["pdf", "docx", "txt"])
+job_desc = st.text_area("🎯 Target Job Description", height=100, placeholder="Ex: Data Analyst role at Google...")
 
 if uploaded_file:
     resume_text = extract_text(uploaded_file)
-    st.success("✅ Resume Loaded!")
+    st.success(f"✅ {uploaded_file.name} Loaded Successfully!")
 
-    tab1, tab2, tab3, tab4 = st.tabs(["📊 Analysis", "🎯 ATS Match", "❓ Mock Interview", "💡 Rewrite"])
+    if st.button("✨ Generate AI Analysis", type="primary", use_container_width=True):
 
-    if st.button("✨ Generate Full AI Report", type="primary", use_container_width=True):
-        with st.spinner("AI is analyzing deeply... 15 seconds"):
+        # ANIMATION 1: Progress bar
+        progress_bar = st.progress(0)
+        status_text = st.empty()
+        for i in range(100):
+            status_text.text(f"AI is scanning your resume... {i+1}%")
+            progress_bar.progress(i + 1)
+            time.sleep(0.05)
+        status_text.text("AI Analysis Complete! 🎉")
+        time.sleep(0.5)
+        st.balloons() # ANIMATION 2: Balloons
+
+        with st.spinner("Finalizing Report..."):
             prompt = f"""
-            You are a world-class HR and Career Coach. Analyze this resume.
+            You are a world-class HR. Analyze this resume.
             Resume: {resume_text}
             Target Job: {job_desc}
-            Return ONLY valid JSON with this structure:
-            {{
-              "overall_score": "85/100",
-              "ats_score": "70/100",
-              "summary": "2 lines",
-              "keyword_gaps": ["skill1", "skill2"],
-              "strengths": ["..","..",".."],
-              "weaknesses": ["..","..",".."],
-              "suggestions": ["Rewrite bullet 1 like this...", ".."],
-              "hr_questions": ["..","..","..","..",".."],
-              "linkedin_headline": "Ex: Data Analyst | Python | SQL | 3 YOE"
-            }}
+            Return ONLY valid JSON:
+            {{"overall_score": "85/100", "ats_score": "70/100", "summary": "...", "keyword_gaps": [".."], "strengths": [".."], "weaknesses": [".."], "suggestions": [".."], "hr_questions": [".."]}}
             """
             response = client.chat.completions.create(
                 model="llama-3.3-70b-versatile",
@@ -60,34 +83,42 @@ if uploaded_file:
 
     if 'data' in st.session_state:
         data = st.session_state['data']
-        
+
+        tab1, tab2, tab3 = st.tabs(["📊 Analysis", "🎯 ATS & Skills", "❓ Mock Interview"])
+
         with tab1:
-            col1, col2 = st.columns(2)
-            col1.metric("🎯 Overall Score", data.get("overall_score"))
-            col2.metric("🤖 ATS Match Score", data.get("ats_score"))
+            st.markdown('<div class="tab-content">', unsafe_allow_html=True)
+            col1, col2, col3 = st.columns(3)
+            with col1: st.markdown(f'<div class="metric-card"><h2>{data.get("overall_score")}</h2><p>Overall Score</p></div>', unsafe_allow_html=True)
+            with col2: st.markdown(f'<div class="metric-card"><h2>{data.get("ats_score")}</h2><p>ATS Match</p></div>', unsafe_allow_html=True)
+            with col3: st.metric("Keyword Gaps", len(data.get("keyword_gaps", [])))
+
             st.subheader("📝 AI Summary")
             st.info(data.get("summary"))
-            st.subheader("💪 Strengths")
-            for s in data.get("strengths", []): st.success(s)
-            st.subheader("📉 Areas to Improve")
-            for w in data.get("weaknesses", []): st.warning(w)
+
+            col1, col2 = st.columns(2)
+            with col1:
+                st.subheader("💪 Strengths")
+                for s in data.get("strengths", []): st.success(f"✅ {s}")
+            with col2:
+                st.subheader("📉 Improve Areas")
+                for w in data.get("weaknesses", []): st.warning(f"⚠️ {w}")
+            st.markdown('</div>', unsafe_allow_html=True)
 
         with tab2:
-            st.subheader("🎯 Skill Gap Analysis")
-            st.write("Idha add panna unoda ATS score 90+ pogum:")
-            for gap in data.get("keyword_gaps", []): st.error(f"- Missing Keyword: **{gap}**")
-            if job_desc == "": st.caption("Job Description paste pannuna innum accurate ah varum")
+            st.markdown('<div class="tab-content">', unsafe_allow_html=True)
+            st.subheader("🎯 Missing Keywords for ATS")
+            for gap in data.get("keyword_gaps", []):
+                st.error(f"Add this keyword: **{gap}**")
+            st.subheader("💡 Suggestions to Improve")
+            for sug in data.get("suggestions", []): st.write(f"- {sug}")
+            st.markdown('</div>', unsafe_allow_html=True)
 
         with tab3:
+            st.markdown('<div class="tab-content">', unsafe_allow_html=True)
             st.subheader("❓ AI Mock HR Interview")
             for i, q in enumerate(data.get("hr_questions", []), 1):
                 with st.expander(f"Q{i}: {q}"):
-                    user_ans = st.text_area("Your Answer:", key=f"ans{i}")
-                    if st.button("Get AI Feedback", key=f"fb{i}"):
-                        st.write("AI Feedback: Good! But add 1 STAR example to make it 10/10 💪")
-
-        with tab4:
-            st.subheader("✍️ Resume Bullet Rewrites")
-            for sug in data.get("suggestions", []): st.write(f"- {sug}")
-            st.subheader("🔗 LinkedIn Headline Suggestion")
-            st.code(data.get("linkedin_headline"))
+                    st.text_area("Type your answer:", key=f"ans{i}")
+                    st.button("Get AI Feedback", key=f"fb{i}")
+            st.markdown('</div>', unsafe_allow_html=True)
