@@ -1,63 +1,37 @@
 import streamlit as st
 import google.generativeai as genai
 
-st.set_page_config(page_title="AI Career Coach Pro", layout="wide")
-st.title("🎯 AI Career Coach Pro - 15 Models")
+st.set_page_config(page_title="AI Career Coach Pro", layout="centered")
+st.title("🎯 AI Career Coach Pro")
 
-# API Key
+# 1. API Key direct ah Secrets la irundhu edukum
 try:
     genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
     model = genai.GenerativeModel('gemini-1.5-flash')
-except:
-    st.error("GOOGLE_API_KEY missing in Secrets")
+except Exception as e:
+    st.error("GOOGLE_API_KEY set pannala")
     st.stop()
 
-# Input
-col1, col2 = st.columns(2)
-with col1:
-    resume_text = st.text_area("📄 Paste Resume", height=250)
-with col2:
-    job_desc = st.text_area("💼 Paste Job Description", height=250)
+# 2. Input
+resume_text = st.text_area("📄 Resume Paste Pannu", height=200, placeholder="Unoda resume full ah paste pannu")
+job_desc = st.text_area("💼 Job Description Paste Pannu", height=200, placeholder="Job JD paste pannu")
 
-if st.button("🚀 Analyze with 15 Models", use_container_width=True):
+# 3. Button + 15 Models Output
+if st.button("Analyze Now 🔥", type="primary", use_container_width=True):
     if resume_text and job_desc:
-        with st.spinner("15 Models running... 20 seconds"):
+        with st.spinner("15 Models scanning..."):
             prompt = f"""
-            You are 15 HR experts. Analyze this Resume vs Job Description and give output in 15 sections.
+            Act as 15 HR experts. Give Overall Score/100 first.
+            Then give 15 points: ATS, Skills Gap, Interview Q, etc.
+            Keep it short. Use tables.
 
             Resume: {resume_text}
-            Job: {job_desc}
-
-            Give output like this:
-            
-            ### 1. OVERALL SCORE
-            Score: XX/100 with 2 line reason
-
-            ### 2. ATS KEYWORD MATCH
-            Matched: list 10
-            Missing: list 10
-
-            ### 3. SKILLS GAP ANALYSIS
-            ### 4. EXPERIENCE FIT SCORE
-            ### 5. EDUCATION CHECK
-            ### 6. PROJECT RELEVANCE
-            ### 7. RESUME FORMATTING FEEDBACK  
-            ### 8. ACHIEVEMENT QUANTIFICATION
-            ### 9. JOB ROLE ALIGNMENT
-            ### 10. INDUSTRY FIT
-            ### 11. INTERVIEW QUESTIONS PREDICTED - give 5
-            ### 12. SALARY BENCHMARK
-            ### 13. LINKEDIN PROFILE TIPS
-            ### 14. COVER LETTER POINTS
-            ### 15. 30-60-90 DAY PLAN
-            
-            Keep it short, bullet points, table format where possible.
+            JD: {job_desc}
             """
-            response = model.generate_content(prompt)
-            
-            st.success("### ✅ Analysis Complete")
-            st.markdown(response.text)
+            res = model.generate_content(prompt)
+            st.success("### Overall Score + 15 Model Report")
+            st.write(res.text)
     else:
-        st.warning("Resume and JD rendu um podu da")
+        st.warning("Rendu um fill pannu da")
 
-st.sidebar.success("Powered by Gemini 1.5 Flash")
+st.caption("Powered by Gemini 1.5 Flash | No DB needed")
