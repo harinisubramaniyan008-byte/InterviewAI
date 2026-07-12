@@ -1,54 +1,63 @@
 import streamlit as st
-import os # <--- idhu pudhusu
 import google.generativeai as genai
-import pandas as pd
-import plotly.express as px
-import pdfplumber
-from docx import Document
-import mysql.connector
 
 st.set_page_config(page_title="AI Career Coach Pro", layout="wide")
+st.title("🎯 AI Career Coach Pro - 15 Models")
 
-# --- Sidebar ---
-st.sidebar.title("🎯 Target Role")
-role = st.sidebar.text_input("Target Role", "Data Analyst")
-experience = st.sidebar.selectbox("Experience", ["Fresher", "1-2 Years", "3-5 Years", "5+ Years"])
-
-# --- KEY LOAD PANRA LOGIC - 2 VAZHI ---
-api_key = None
-
-# 1. Mudhala Secrets la iruka nu paakum
+# API Key
 try:
-    api_key = st.secrets["GOOGLE_API_KEY"]
+    genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
+    model = genai.GenerativeModel('gemini-1.5-flash')
 except:
-    pass
-
-# 2. Secrets la illana Environment Variable la irundhu edukatum
-if not api_key:
-    api_key = os.environ.get("GOOGLE_API_KEY")
-
-# --- GEMINI CONNECT ---
-if api_key:
-    genai.configure(api_key=api_key)
-    st.sidebar.success("✅ Gemini Connected")
-else:
-    st.sidebar.error("❌ GOOGLE_API_KEY not found")
-    st.warning("⚠️ Add GOOGLE_API_KEY in Settings > Advanced settings > Environment variables")
+    st.error("GOOGLE_API_KEY missing in Secrets")
     st.stop()
 
-st.title("🚀 AI Career Coach Pro")
-tab1, tab2 = st.tabs(["❓ AI Interview", "📊 ATS Score"])
+# Input
+col1, col2 = st.columns(2)
+with col1:
+    resume_text = st.text_area("📄 Paste Resume", height=250)
+with col2:
+    job_desc = st.text_area("💼 Paste Job Description", height=250)
 
-with tab1:
-    st.header("AI Mock Interview")
-    if st.button("Start Interview"):
-        model = genai.GenerativeModel('gemini-1.5-flash')
-        prompt = f"You are an HR. Ask 3 interview questions for a {role} with {experience} experience."
-        response = model.generate_content(prompt)
-        st.write(response.text)
+if st.button("🚀 Analyze with 15 Models", use_container_width=True):
+    if resume_text and job_desc:
+        with st.spinner("15 Models running... 20 seconds"):
+            prompt = f"""
+            You are 15 HR experts. Analyze this Resume vs Job Description and give output in 15 sections.
 
-with tab2:
-    st.header("ATS Resume Score")
-    uploaded_file = st.file_uploader("Upload Resume PDF/DOCX", type=["pdf","docx"])
-    if uploaded_file:
-        st.success("File uploaded! ATS feature coming soon.")
+            Resume: {resume_text}
+            Job: {job_desc}
+
+            Give output like this:
+            
+            ### 1. OVERALL SCORE
+            Score: XX/100 with 2 line reason
+
+            ### 2. ATS KEYWORD MATCH
+            Matched: list 10
+            Missing: list 10
+
+            ### 3. SKILLS GAP ANALYSIS
+            ### 4. EXPERIENCE FIT SCORE
+            ### 5. EDUCATION CHECK
+            ### 6. PROJECT RELEVANCE
+            ### 7. RESUME FORMATTING FEEDBACK  
+            ### 8. ACHIEVEMENT QUANTIFICATION
+            ### 9. JOB ROLE ALIGNMENT
+            ### 10. INDUSTRY FIT
+            ### 11. INTERVIEW QUESTIONS PREDICTED - give 5
+            ### 12. SALARY BENCHMARK
+            ### 13. LINKEDIN PROFILE TIPS
+            ### 14. COVER LETTER POINTS
+            ### 15. 30-60-90 DAY PLAN
+            
+            Keep it short, bullet points, table format where possible.
+            """
+            response = model.generate_content(prompt)
+            
+            st.success("### ✅ Analysis Complete")
+            st.markdown(response.text)
+    else:
+        st.warning("Resume and JD rendu um podu da")
+
+st.sidebar.success("Powered by Gemini 1.5 Flash")
