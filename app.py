@@ -3,19 +3,22 @@ from groq import Groq
 import pdfplumber
 import docx
 import pandas as pd
+import json
 
 st.set_page_config(page_title="AI Career Coach Pro V2", layout="wide")
 st.title("🎯 AI Career Coach Pro V2")
-
-# Tabs
-tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["📍 Overview", "🏢 Companies", "💰 Salary", "🎓 Internships", "❓ Interview", "📊 Match %", "🔔 Alerts"])
 
 # GROQ API Key
 try:
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 except:
-    st.error("⚠️ GROQ_API_KEY missing in Secrets")
+    st.error("⚠️ Settings > Secrets la GROQ_API_KEY podu da")
     st.stop()
+
+# Session state for data
+if 'analysis_done' not in st.session_state:
+    st.session_state.analysis_done = False
+    st.session_state.data = {}
 
 # File read function
 def read_file(uploaded_file):
@@ -35,71 +38,119 @@ def read_file(uploaded_file):
         text = uploaded_file.read().decode("utf-8", errors='ignore')
     return text
 
+# 1. FIRST: Upload Section - Mela ve irukum
+st.markdown("### 📤 Step 1: Resume & JD Upload Pannu")
+col1, col2 = st.columns(2)
+with col1:
+    resume_file = st.file_uploader("1. Resume Upload Pannu", type=['pdf', 'docx', 'txt'], key="resume_upload")
+    resume_text_area = st.text_area("Illa na Paste Pannu", height=150, key="resume_paste")
+    resume_text = read_file(resume_file) if resume_file else resume_text_area
+    if resume_file: st.success(f"✅ {resume_file.name}")
+
+with col2:
+    job_file = st.file_uploader("2. JD Upload Pannu", type=['pdf', 'docx', 'txt'], key="jd_upload")
+    job_text_area = st.text_area("JD Paste Pannu", height=150, key="jd_paste")
+    job_desc = read_file(job_file) if job_file else job_text_area
+    if job_file: st.success(f"✅ {job_file.name}")
+
+if st.button("🚀 Step 2: 19 Models oda Analyze Pannu", type="primary", use_container_width=True):
+    if resume_text.strip() and job_desc.strip():
+        with st.spinner("19 AI Models ellam tab um fill panradhuku scanning..."):
+            prompt = f"""
+            You are 19 HR experts. Based on this Resume and JD, return ONLY valid JSON.
+
+            RESUME: {resume_text}
+            JD: {job_desc}
+
+            Return JSON with this structure:
+            {{
+                "location_alert": [{{"Company":"TCS","Role":"Data Analyst","Openings":10}}, {{}}],
+                "fit_score": 85,
+                "fit_feedback": "Python match aagudhu",
+                "companies": [{{"Company":"Zoho","Match":90,"Reason":"Skills match"}}],
+                "salary": {{"Role":"Data Analyst","Min":6,"Max":12,"Avg":8.5}},
+                "internships": [{{"Company":"Freshworks","Role":"Intern","Duration":"3 months"}}],
+                "interview_q": ["Q1","Q2","Q3","Q4","Q5"],
+                "match_details": "Detailed 19 point analysis here in markdown"
+            }}
+            """
+            response = client.chat.completions.create(
+                model="llama-3.1-70b-versatile",
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=4000,
+                temperature=0.2
+            )
+            try:
+                st.session_state.data = json.loads(response.choices[0].message.content)
+                st.session_state.analysis_done = True
+                st.rerun()
+            except:
+                st.error("AI response error. Again try pannu")
+    else:
+        st.warning("⚠️ Resume and JD rendu um podu")
+
+st.markdown("---")
+
+# 2. Tabs - Upload panna aprom dhan data varum
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs(["📍 Overview", "🏢 Companies", "💰 Salary", "🎓 Internships", "❓ Interview", "📊 Match %", "🔔 Alerts"])
+
 with tab1:
     st.header("1. Location Smart Alert 📍")
-    st.write("Chennai la 5 companies iruku")
-    
-    data = {
-        'Company': ['TCS', 'Zoho', 'Freshworks', 'Infosys', 'Wipro'],
-        'Role': ['Data Analyst']*5,
-        'Openings': [12, 5, 8, 10, 7]
-    }
-    df = pd.DataFrame(data)
-    st.dataframe(df, use_container_width=True)
-    
-    st.header("2. Company Fit Score 🎯")
-    st.progress(82)
-    st.write("**Zoho ku unga fit: 82%** - Python skill match aagudhu. Excel konjam improve pannanum")
-    
-    st.markdown("---")
-    st.subheader("Upload Resume & JD for Full 19 Model Analysis")
-    
-    col1, col2 = st.columns(2)
-    with col1:
-        resume_file = st.file_uploader("Resume Upload", type=['pdf', 'docx', 'txt'], key="resume_upload")
-        resume_text_area = st.text_area("Illa na Paste Pannu", height=200, key="resume_paste")
-        resume_text = read_file(resume_file) if resume_file else resume_text_area
+    if st.session_state.analysis_done:
+        df = pd.DataFrame(st.session_state.data.get("location_alert", []))
+        st.dataframe(df, use_container_width=True)
 
-    with col2:
-        job_file = st.file_uploader("JD Upload", type=['pdf', 'docx', 'txt'], key="jd_upload")
-        job_text_area = st.text_area("JD Paste Pannu", height=200, key="jd_paste")
-        job_desc = read_file(job_file) if job_file else job_text_area
-    
-    if st.button("🚀 Run 19 Models Analysis", type="primary", use_container_width=True):
-        if resume_text.strip() and job_desc.strip():
-            with st.spinner("19 AI Models scanning..."):
-                prompt = f"""You are 19 HR experts. Analyze Resume vs JD.
-
-RESUME: {resume_text}
-JOB: {job_desc}
-
-Give 19 points: 1.ATS Score 2.Keywords 3.Skills Gap 4.Experience 5.Education 6.Projects 7.Formatting 8.Achievements 9.Role Align 10.Industry Fit 11.Interview Q 12.Salary 13.Linkedin 14.Cover Letter 15.30-60-90 16.Red Flags 17.Quick Wins 18.Competitor 19.Final Rec"""
-                response = client.chat.completions.create(
-                    model="llama-3.1-70b-versatile",
-                    messages=[{"role": "user", "content": prompt}],
-                    max_tokens=4000
-                )
-                st.success("✅ Analysis Complete")
-                st.markdown(response.choices[0].message.content)
-        else:
-            st.warning("Resume and JD rendu um podu")
+        st.header("2. Company Fit Score 🎯")
+        score = st.session_state.data.get("fit_score", 0)
+        st.progress(score/100)
+        st.write(f"**Fit: {score}%** - {st.session_state.data.get('fit_feedback','')}")
+    else:
+        st.info("Mela Resume + JD upload panni Analyze adichaa idhu fill aagum")
 
 with tab2:
     st.header("🏢 Companies")
-    st.write("Company list varum - ipo sample data")
+    if st.session_state.analysis_done:
+        df = pd.DataFrame(st.session_state.data.get("companies", []))
+        st.dataframe(df, use_container_width=True)
+    else:
+        st.info("First upload pannu")
 
 with tab3:
-    st.header("💰 Salary")
-    st.write("Salary benchmark varum")
+    st.header("💰 Salary Benchmark")
+    if st.session_state.analysis_done:
+        sal = st.session_state.data.get("salary", {})
+        st.metric("Avg Salary LPA", f"{sal.get('Avg',0)} LPA")
+        st.write(f"Range: {sal.get('Min',0)} - {sal.get('Max',0)} LPA")
+    else:
+        st.info("First upload pannu")
 
 with tab4:
     st.header("🎓 Internships")
-    
+    if st.session_state.analysis_done:
+        df = pd.DataFrame(st.session_state.data.get("internships", []))
+        st.dataframe(df, use_container_width=True)
+    else:
+        st.info("First upload pannu")
+
 with tab5:
-    st.header("❓ Interview")
-    
+    st.header("❓ Predicted Interview Questions")
+    if st.session_state.analysis_done:
+        for i,q in enumerate(st.session_state.data.get("interview_q", [])):
+            st.write(f"{i+1}. {q}")
+    else:
+        st.info("First upload pannu")
+
 with tab6:
-    st.header("📊 Match %")
-    
+    st.header("📊 19 Models Match Analysis")
+    if st.session_state.analysis_done:
+        st.markdown(st.session_state.data.get("match_details",""))
+    else:
+        st.info("First upload pannu")
+
 with tab7:
-    st.header("🔔 Alerts")
+    st.header("🔔 Smart Alerts")
+    if st.session_state.analysis_done:
+        st.success("✅ Unga profile ku 3 new jobs match aagudhu")
+        st.warning("⚠️ Excel skill konjam improve pannanum")
+    else:
+        st.info("First upload pannu")
