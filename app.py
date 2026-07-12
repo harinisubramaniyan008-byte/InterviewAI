@@ -7,7 +7,7 @@ import docx
 from dotenv import load_dotenv
 import google.generativeai as genai
 
-# Load API Key
+# Load API Key from GitHub Secrets
 load_dotenv()
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
@@ -35,7 +35,7 @@ location = st.sidebar.selectbox("📍 Location Select Pannu", ["Chennai", "Coimb
 role = st.sidebar.text_input("🎯 Target Role", "Data Analyst")
 uploaded_file = st.sidebar.file_uploader("📄 Resume Upload pannu", type=["pdf", "docx"])
 
-# Dummy Data - ipo kku manual data. aprom API vachukalam
+# Dummy Data - ipo kku manual data
 companies_data = {
     'Company': ['TCS', 'Zoho', 'Freshworks', 'Infosys', 'Wipro'],
     'Location': ['Chennai', 'Chennai', 'Chennai', 'Chennai', 'Chennai'],
@@ -101,7 +101,6 @@ if uploaded_file and role:
     with tabs[5]:
         st.subheader("Resume to JD Match % 📊")
         st.progress(65)
-        st.write("**Unga Match: 65%**")
         st.warning("Missing Skills: SQL, PowerBI. Idha add pannuna 85% varum")
         if st.button("AI Resume ah Improve pannu"):
             st.info("Gemini un resume ah analyze panni keyword add pannum")
