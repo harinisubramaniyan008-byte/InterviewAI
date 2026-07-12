@@ -7,3 +7,4 @@ python-docx
 mysql-connector-python
 groq
 flask
+report lab
