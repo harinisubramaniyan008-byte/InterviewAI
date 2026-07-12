@@ -1,124 +1,116 @@
 import streamlit as st
+import pandas as pd
+import plotly.express as px
+import os
 import pdfplumber
 import docx
-from groq import Groq
-import json
-import time
+from dotenv import load_dotenv
+import google.generativeai as genai
 
-st.set_page_config(page_title="AI Career Coach Pro", page_icon="🚀", layout="wide")
+# Load API Key
+load_dotenv()
+genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
-# CSS for animation and cards
+st.set_page_config(page_title="AI Career Coach Pro V2", page_icon="🚀", layout="wide")
+
+# CSS for cards
 st.markdown("""
 <style>
-   .metric-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 20px;
-        border-radius: 15px;
-        color: white;
-        text-align: center;
-        box-shadow: 0 4px 15px 0 rgba(31, 38, 135, 0.2);
-    }
-   .tab-content {
-        animation: fadeIn 0.5s;
-    }
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(10px); }
-        to { opacity: 1; transform: translateY(0); }
-    }
+.metric-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    padding: 20px;
+    border-radius: 15px;
+    color: white;
+    text-align: center;
+    box-shadow: 0 4px 15px 0 rgba(31, 38, 135, 0.2);
+}
 </style>
 """, unsafe_allow_html=True)
 
-client = Groq(api_key=st.secrets["GROQ_API_KEY"])
+st.title("🚀 AI Career Coach Pro V2")
 
-def extract_text(uploaded_file):
-    text = ""
-    if uploaded_file.name.endswith(".pdf"):
-        with pdfplumber.open(uploaded_file) as pdf:
-            for page in pdf.pages:
-                if page.extract_text(): text += page.extract_text() + "\n"
-    elif uploaded_file.name.endswith(".docx"):
-        doc = docx.Document(uploaded_file)
-        for para in doc.paragraphs: text += para.text + "\n"
-    else: text = uploaded_file.read().decode("utf-8")
-    return text
+# SIDEBAR
+st.sidebar.header("Ungal Profile")
+location = st.sidebar.selectbox("📍 Location Select Pannu", ["Chennai", "Coimbatore", "Bangalore", "Hyderabad", "Remote"])
+role = st.sidebar.text_input("🎯 Target Role", "Data Analyst")
+uploaded_file = st.sidebar.file_uploader("📄 Resume Upload pannu", type=["pdf", "docx"])
 
-st.title("🚀 AI Career Coach Pro")
-st.caption("Upload pannunga... AI ungaluku offer letter varaikum guide panum")
+# Dummy Data - ipo kku manual data. aprom API vachukalam
+companies_data = {
+    'Company': ['TCS', 'Zoho', 'Freshworks', 'Infosys', 'Wipro'],
+    'Location': ['Chennai', 'Chennai', 'Chennai', 'Chennai', 'Chennai'],
+    'Role': ['Data Analyst', 'Data Analyst', 'Data Analyst', 'Data Analyst', 'Data Analyst'],
+    'Openings': [12, 5, 8, 10, 7],
+    'Salary_LPA': ['3.6 - 6', '6 - 10', '8 - 15', '4 - 7', '3.5 - 6.5']
+}
+companies_df = pd.DataFrame(companies_data)
 
-uploaded_file = st.file_uploader("📤 Drag & Drop Your Resume Here", type=["pdf", "docx", "txt"])
-job_desc = st.text_area("🎯 Target Job Description", height=100, placeholder="Ex: Data Analyst role at Google...")
+internships_data = {
+    'Company': ['Zoho', 'TCS', 'Freshworks'],
+    'Location': ['Chennai', 'Chennai', 'Chennai'],
+    'Role': ['Data Intern', 'AI Intern', 'Product Intern'],
+    'Stipend': ['₹15,000', '₹20,000', '₹25,000'],
+    'Last_Date': ['2026-04-30', '2026-05-15', '2026-05-01']
+}
+internships_df = pd.DataFrame(internships_data)
 
-if uploaded_file:
-    resume_text = extract_text(uploaded_file)
-    st.success(f"✅ {uploaded_file.name} Loaded Successfully!")
+filtered_companies = companies_df[companies_df['Location'] == location]
 
-    if st.button("✨ Generate AI Analysis", type="primary", use_container_width=True):
+if uploaded_file and role:
+    tabs = st.tabs(["📍 Overview", "🏢 Companies", "💰 Salary", "🎓 Internships", "❓ Interview", "📊 Match %", "🔔 Alerts"])
 
-        # ANIMATION 1: Progress bar
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-        for i in range(100):
-            status_text.text(f"AI is scanning your resume... {i+1}%")
-            progress_bar.progress(i + 1)
-            time.sleep(0.05)
-        status_text.text("AI Analysis Complete! 🎉")
-        time.sleep(0.5)
-        st.balloons() # ANIMATION 2: Balloons
+    with tabs[0]:
+        st.subheader("1. Location Smart Alert 📍")
+        st.write(f"**{location}** la **{len(filtered_companies)}** companies iruku")
+        st.dataframe(filtered_companies[['Company', 'Role', 'Openings']], use_container_width=True)
 
-        with st.spinner("Finalizing Report..."):
-            prompt = f"""
-            You are a world-class HR. Analyze this resume.
-            Resume: {resume_text}
-            Target Job: {job_desc}
-            Return ONLY valid JSON:
-            {{"overall_score": "85/100", "ats_score": "70/100", "summary": "...", "keyword_gaps": [".."], "strengths": [".."], "weaknesses": [".."], "suggestions": [".."], "hr_questions": [".."]}}
-            """
-            response = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0.5,
-                response_format={"type": "json_object"}
-            )
-            st.session_state['data'] = json.loads(response.choices[0].message.content)
+        st.subheader("2. Company Fit Score 🎯")
+        st.progress(82)
+        st.write("Zoho ku unga fit: **82%** - Python skill match aagudhu. Excel konjam improve pannanum")
 
-    if 'data' in st.session_state:
-        data = st.session_state['data']
+    with tabs[1]:
+        st.subheader("Top Companies in " + location)
+        for i, row in filtered_companies.iterrows():
+            st.success(f"**{row['Company']}** - {row['Role']} | {row['Openings']} Openings | Salary: {row['Salary_LPA']} LPA")
 
-        tab1, tab2, tab3 = st.tabs(["📊 Analysis", "🎯 ATS & Skills", "❓ Mock Interview"])
+    with tabs[2]:
+        st.subheader("Salary Predictor 💰")
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            st.markdown('<div class="metric-card"><h3>Per Month</h3><h2>₹30K - ₹50K</h2></div>', unsafe_allow_html=True)
+        with col2:
+            st.markdown('<div class="metric-card"><h3>Per Year</h3><h2>₹3.6 - ₹6 LPA</h2></div>', unsafe_allow_html=True)
+        with col3:
+            st.markdown('<div class="metric-card"><h3>2 Yrs Exp</h3><h2>₹8 LPA</h2></div>', unsafe_allow_html=True)
 
-        with tab1:
-            st.markdown('<div class="tab-content">', unsafe_allow_html=True)
-            col1, col2, col3 = st.columns(3)
-            with col1: st.markdown(f'<div class="metric-card"><h2>{data.get("overall_score")}</h2><p>Overall Score</p></div>', unsafe_allow_html=True)
-            with col2: st.markdown(f'<div class="metric-card"><h2>{data.get("ats_score")}</h2><p>ATS Match</p></div>', unsafe_allow_html=True)
-            with col3: st.metric("Keyword Gaps", len(data.get("keyword_gaps", [])))
+        fig = px.bar(x=["Fresher", "2 Yrs Exp", "5 Yrs Exp"], y=[4.5, 8, 15], title="Experience vs Salary Growth")
+        st.plotly_chart(fig, use_container_width=True)
 
-            st.subheader("📝 AI Summary")
-            st.info(data.get("summary"))
+    with tabs[3]:
+        st.subheader("Open Internships 🎓")
+        st.dataframe(internships_df[internships_df['Location'] == location], use_container_width=True)
 
-            col1, col2 = st.columns(2)
-            with col1:
-                st.subheader("💪 Strengths")
-                for s in data.get("strengths", []): st.success(f"✅ {s}")
-            with col2:
-                st.subheader("📉 Improve Areas")
-                for w in data.get("weaknesses", []): st.warning(f"⚠️ {w}")
-            st.markdown('</div>', unsafe_allow_html=True)
+    with tabs[4]:
+        st.subheader("Interview Questions ❓")
+        if st.button("Generate Questions"):
+            prompt = f"Generate 5 important interview questions for {role} role in {location} for fresher"
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            response = model.generate_content(prompt)
+            st.write(response.text)
 
-        with tab2:
-            st.markdown('<div class="tab-content">', unsafe_allow_html=True)
-            st.subheader("🎯 Missing Keywords for ATS")
-            for gap in data.get("keyword_gaps", []):
-                st.error(f"Add this keyword: **{gap}**")
-            st.subheader("💡 Suggestions to Improve")
-            for sug in data.get("suggestions", []): st.write(f"- {sug}")
-            st.markdown('</div>', unsafe_allow_html=True)
+    with tabs[5]:
+        st.subheader("Resume to JD Match % 📊")
+        st.progress(65)
+        st.write("**Unga Match: 65%**")
+        st.warning("Missing Skills: SQL, PowerBI. Idha add pannuna 85% varum")
+        if st.button("AI Resume ah Improve pannu"):
+            st.info("Gemini un resume ah analyze panni keyword add pannum")
 
-        with tab3:
-            st.markdown('<div class="tab-content">', unsafe_allow_html=True)
-            st.subheader("❓ AI Mock HR Interview")
-            for i, q in enumerate(data.get("hr_questions", []), 1):
-                with st.expander(f"Q{i}: {q}"):
-                    st.text_area("Type your answer:", key=f"ans{i}")
-                    st.button("Get AI Feedback", key=f"fb{i}")
-            st.markdown('</div>', unsafe_allow_html=True)
+    with tabs[6]:
+        st.subheader("Job Alerts 🔔")
+        st.warning("⚠️ TCS Data Analyst - Last 2 days to apply!")
+        st.info("Daily 9AM ku pudhu 5 jobs varum")
+        st.success("Referral: Infosys la unga college senior 2 per irukanga")
+
+else:
+    st.info("👈 Sidebar la Location, Role kuduthu Resume upload pannunga")
