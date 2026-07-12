@@ -10,10 +10,10 @@ st.title("🎯 AI Career Coach Pro - 15 Models")
 try:
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 except:
-    st.error("GROQ_API_KEY missing in Secrets")
+    st.error("⚠️ GROQ_API_KEY missing in Secrets")
     st.stop()
 
-# 2. File read panna function - pdfplumber version
+# 2. File padikka function
 def read_file(uploaded_file):
     text = ""
     if uploaded_file.type == "application/pdf":
@@ -28,54 +28,70 @@ def read_file(uploaded_file):
         text = uploaded_file.read().decode("utf-8")
     return text
 
-# 3. Input - Upload + Text area
+# 3. Input Section
 col1, col2 = st.columns(2)
 with col1:
     st.subheader("📄 Resume")
-    resume_file = st.file_uploader("Resume Upload Pannu", type=['pdf', 'docx', 'txt'])
-    resume_text = st.text_area("Illa na inga Paste Pannu", height=200)
+    resume_file = st.file_uploader("Resume Upload Pannu", type=['pdf', 'docx', 'txt'], key="resume_upload")
+    resume_text = st.text_area("Illa na inga Paste Pannu", height=250, key="resume_paste")
     if resume_file:
         resume_text = read_file(resume_file)
+        st.success(f"✅ {resume_file.name} loaded")
 
 with col2:
     st.subheader("💼 Job Description")
-    job_file = st.file_uploader("JD Upload Pannu", type=['pdf', 'docx', 'txt'])
-    job_desc = st.text_area("Illa na inga Paste Pannu", height=200)
+    job_file = st.file_uploader("JD Upload Pannu", type=['pdf', 'docx', 'txt'], key="jd_upload")
+    job_desc = st.text_area("JD ah inga Paste Pannu", height=250, key="jd_paste")
     if job_file:
         job_desc = read_file(job_file)
+        st.success(f"✅ {job_file.name} loaded")
 
-# 4. Button + 15 Models Output
+# 4. Analyze Button
 if st.button("🚀 Analyze with 15 Models", type="primary", use_container_width=True):
-    if resume_text and job_desc:
-        with st.spinner("15 Models scanning... 15 seconds"):
+    if resume_text.strip() and job_desc.strip():
+        with st.spinner("15 HR Experts scanning... konjam wait pannu"):
             prompt = f"""
-            You are 15 HR experts. Analyze this Resume vs Job Description.
+            You are 15 senior HR experts analyzing a resume against a job description.
 
-            Resume: {resume_text}
-            Job: {job_desc}
+            RESUME:
+            {resume_text}
 
-            ### 1. OVERALL SCORE
+            JOB DESCRIPTION:
+            {job_desc}
+
+            Give output in this exact format:
+
+            ### 1. OVERALL MATCH SCORE: XX/100
+            2 line reason
+
             ### 2. ATS KEYWORD MATCH
+            Missing keywords:
+
             ### 3. SKILLS GAP ANALYSIS
-            ### 4. EXPERIENCE FIT SCORE
+            You have:
+            You need:
+
+            ### 4. EXPERIENCE FIT
             ### 5. EDUCATION CHECK
             ### 6. PROJECT RELEVANCE
             ### 7. RESUME FORMATTING FEEDBACK
-            ### 8. ACHIEVEMENT QUANTIFICATION
-            ### 9. JOB ROLE ALIGNMENT
+            ### 8. ACHIEVEMENT QUANTIFICATION TIPS
+            ### 9. JOB ROLE ALIGNMENT %
             ### 10. INDUSTRY FIT
-            ### 11. INTERVIEW QUESTIONS PREDICTED - 5
-            ### 12. SALARY BENCHMARK
-            ### 13. LINKEDIN PROFILE TIPS
-            ### 14. COVER LETTER POINTS
+            ### 11. TOP 5 INTERVIEW QUESTIONS
+            ### 12. SALARY BENCHMARK FOR INDIA
+            ### 13. LINKEDIN PROFILE 3 TIPS
+            ### 14. COVER LETTER 3 BULLET POINTS
             ### 15. 30-60-90 DAY PLAN
             """
             response = client.chat.completions.create(
                 model="llama-3.1-70b-versatile",
                 messages=[{"role": "user", "content": prompt}],
-                max_tokens=3000
+                max_tokens=3500
             )
             st.success("### ✅ Analysis Complete")
             st.markdown(response.choices[0].message.content)
     else:
-        st.warning("Resume and JD rendu um podu da")
+        st.warning("⚠️ Resume and JD rendu um podu da")
+
+st.caption("Powered by Groq Llama-3.1-70B")
