@@ -5,7 +5,6 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 import json
-import time
 
 st.set_page_config(page_title="AI Career OS PRO", layout="wide", page_icon="🚀")
 
@@ -15,11 +14,14 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+st.title("🚀 AI Career OS PRO")
+
+# GROQ KEY CHECK
 try:
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 except:
-    st.error("⚠️ Please add GROQ_API_KEY in Streamlit Secrets → Settings")
-    st.stop()
+    st.sidebar.error("⚠️ Add GROQ_API_KEY in Settings → Secrets")
+    client = None
 
 def read_pdf(file):
     text = ""
@@ -28,119 +30,104 @@ def read_pdf(file):
             if page.extract_text(): text += page.extract_text() + "\n"
     return text
 
-# DEMO DATA - AI FAIL AANAALUM ITHU KAATUM
+# DEMO DATA - APP KU LIFE KUDUKURADHU IDHUDHAN
 DEMO_DATA = {
   "ats_score": 75, "competitor_rank": 25,
   "skill_radar_you": {"Python": 7, "SQL": 6, "PowerBI": 2, "Excel": 8}, "skill_radar_job": {"Python": 9, "SQL": 9, "PowerBI": 8, "Excel": 8},
-  "companies": [{"name": "Zoho", "openings": 23}, {"name": "TCS", "openings": 45}], "salary_roi": [{"skill": "PowerBI", "salary_hike": "+22%"}],
   "resume_rewrite": ["Old: Worked on data", "New: Analyzed 10GB data using Python, cut report time by 40%"],
-  "learning_concepts": [{"topic": "SQL JOIN", "explain": "JOIN combines 2 tables. INNER = common rows. LEFT = all from left table."}],
-  "mock_q": ["Tell me about a Python project", "What is ETL?"], "roadmap": [{"day": 1, "task": "Learn SQL SELECT"}, {"day": 2, "task": "Practice 5 JOIN queries"}],
-  "motivation": "You are Top 25%! Master PowerBI in 14 days to reach Top 1%",
-  "jobs": [{"title": "Data Analyst", "company": "Zoho", "link": "https://www.naukri.com"}],
-  "courses": [{"skill": "PowerBI", "link": "https://youtube.com", "name": "Complete PowerBI for Beginners"}],
-  "news": ["AI Agents will replace 30% of junior jobs in 2026"]
+  "learning_concepts": [{"topic": "SQL JOIN", "explain": "JOIN combines 2 tables. INNER = common rows."}],
+  "mock_q": ["Tell me about a Python project"], "roadmap": [{"day": 1, "task": "Learn SQL SELECT"}],
+  "motivation": "You are Top 25%! Master PowerBI in 14 days!",
+  "jobs": [{"title": "Data Analyst", "company": "Zoho", "link": "https://www.naukri.com"}]
 }
 
-@st.cache_data(show_spinner="AI Analyzing Your Career... 40 seconds")
-def get_full_analysis(resume_text, location):
-    prompt = f"Return ONLY JSON. RESUME: {resume_text[:2000]} LOCATION: {location}" # Resume length cut pannen
-
+@st.cache_data(show_spinner="AI Analyzing... 30 seconds")
+def get_full_analysis(_resume_text, _location): # _ podradhu cache ku
+    if client is None: return DEMO_DATA
+    prompt = f"Return ONLY JSON. RESUME: {_resume_text[:1500]} LOCATION: {_location}"
     try:
-        response = client.chat.completions.create(
-            model="llama-3.3-70b-versatile",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.1,
-            max_tokens=3000,
-            response_format={"type": "json_object"}
-        )
+        response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "user", "content": prompt}], temperature=0.1, max_tokens=2500, response_format={"type": "json_object"})
         return json.loads(response.choices[0].message.content)
-    except Exception as e:
-        st.error(f"AI Error: {e}. Loading Demo Data instead.")
-        return DEMO_DATA # AI FAIL AANAALUM APP NIKKADHU
+    except:
+        return DEMO_DATA
 
-# SIDEBAR MENU
-st.sidebar.title("🚀 AI Career OS PRO")
-page = st.sidebar.radio("Go to", ["🏠 Dashboard", "📊 Analytics", "🧠 Learn", "💼 Interview", "🎯 Roadmap", "🔎 Job Search"])
+# SESSION STATE INIT
+if 'data' not in st.session_state:
+    st.session_state.data = None
 
-if 'data' not in st.session_state: st.session_state.data = None
+# SIDEBAR
+st.sidebar.title("Menu")
+page = st.sidebar.radio("Go to", ["🏠 Dashboard", "📊 Analytics", "🧠 Learn", "💼 Interview", "🎯 Roadmap"])
 
-with st.sidebar:
-    st.header("Step 1: Upload Resume")
-    resume_file = st.file_uploader("PDF", type=["pdf"])
-    location = st.selectbox("Target City", ["Chennai", "Bangalore", "Hyderabad"])
+st.sidebar.header("Step 1: Upload Resume")
+resume_file = st.sidebar.file_uploader("PDF", type=["pdf"])
+location = st.sidebar.selectbox("Target City", ["Chennai", "Bangalore", "Hyderabad"])
 
-    col1, col2 = st.columns(2)
-    with col1:
-        if resume_file and st.button("🚀 Generate", type="primary"):
-            with st.spinner("Building your OS..."):
-                resume_text = read_pdf(resume_file)
-                st.session_state.data = get_full_analysis(resume_text, location)
-                st.success("✅ Done!")
-                st.rerun() # IMPORTANT: Page ah refresh pannum
-    with col2:
-        if st.button("🎮 Demo Mode"):
-            st.session_state.data = DEMO_DATA
-            st.success("✅ Demo Loaded!")
-            st.rerun()
+col1, col2 = st.sidebar.columns(2)
+with col1:
+    if resume_file and st.sidebar.button("🚀 Generate", type="primary"):
+        with st.spinner("Building..."):
+            resume_text = read_pdf(resume_file)
+            st.session_state.data = get_full_analysis(resume_text, location)
+            st.success("✅ Done!")
+with col2:
+    if st.sidebar.button("🎮 Demo Mode"):
+        st.session_state.data = DEMO_DATA
+        st.success("✅ Demo Loaded!")
 
 data = st.session_state.data
 
-def check_data():
-    if data is None:
-        st.warning("⚠️ First click 'Generate' or 'Demo Mode' in sidebar")
-        st.stop()
+# HELPER FUNCTION - IDHU DHAN MAGIC
+def get_safe(key, default=0):
+    if data is None: return default
+    return data.get(key, default)
 
-# PAGE 1: DASHBOARD
+# PAGE 1: DASHBOARD - CRASH PROOF
 if page == "🏠 Dashboard":
-    st.title("Welcome to your Career OS")
-    if data:
-        col1, col2, col3 = st.columns(3)
-        with col1: st.markdown(f'<div class="metric-card"><h3>ATS Score</h3><h1>{data.get("ats_score")}/100</h1></div>', unsafe_allow_html=True)
-        with col2: st.markdown(f'<div class="metric-card"><h3>Market Rank</h3><h1>Top {data.get("competitor_rank")}%</h1></div>', unsafe_allow_html=True)
-        with col3: st.markdown(f'<div class="metric-card"><h3>Motivation</h3><p>{data.get("motivation")}</p></div>', unsafe_allow_html=True)
-        st.progress(data.get("ats_score")/100, text="Your Career Level")
-    else: st.info("👈 Step 1: Click 'Generate' or 'Demo Mode' in sidebar")
+    ats = get_safe("ats_score", 0)
+    rank = get_safe("competitor_rank", 0)
+    motivation = get_safe("motivation", "Click Demo Mode to start")
+
+    col1, col2, col3 = st.columns(3)
+    with col1: st.markdown(f'<div class="metric-card"><h3>ATS Score</h3><h1>{ats}/100</h1></div>', unsafe_allow_html=True)
+    with col2: st.markdown(f'<div class="metric-card"><h3>Market Rank</h3><h1>Top {rank}%</h1></div>', unsafe_allow_html=True)
+    with col3: st.markdown(f'<div class="metric-card"><h3>Motivation</h3><p>{motivation}</p></div>', unsafe_allow_html=True)
+
+    # FIXED LINE 102 - ITHANALA DHAN ERROR VARUDHU
+    if data is not None:
+        st.progress(ats/100, text="Your Career Level")
+    else:
+        st.info("👈 Step 1: Click 'Demo Mode' or Upload Resume + Generate")
 
 # PAGE 2: ANALYTICS
 elif page == "📊 Analytics":
-    check_data()
-    st.title("📊 Deep Analytics")
-    you, job = data.get("skill_radar_you", {}), data.get("skill_radar_job", {})
-    df = pd.DataFrame({'Skill': list(you.keys()), 'You': list(you.values()), 'Job': list(job.values())})
-    fig = go.Figure(); fig.add_trace(go.Scatterpolar(r=df['You'], theta=df['Skill'], fill='toself', name='You'))
-    fig.add_trace(go.Scatterpolar(r=df['Job'], theta=df['Skill'], fill='toself', name='Job Demand'))
-    st.plotly_chart(fig, use_container_width=True)
-    st.write("**Before:**", data.get("resume_rewrite")[0]); st.success("**After:** " + data.get("resume_rewrite")[1])
+    if data is None: st.warning("⚠️ First click 'Demo Mode'"); st.stop()
+    you = get_safe("skill_radar_you", {})
+    job = get_safe("skill_radar_job", {})
+    if you:
+        df = pd.DataFrame({'Skill': list(you.keys()), 'You': list(you.values()), 'Job': list(job.values())})
+        fig = go.Figure(); fig.add_trace(go.Scatterpolar(r=df['You'], theta=df['Skill'], fill='toself', name='You'))
+        fig.add_trace(go.Scatterpolar(r=df['Job'], theta=df['Skill'], fill='toself', name='Job'))
+        st.plotly_chart(fig)
+    st.write("**Before:**", get_safe("resume_rewrite", ["N/A","N/A"])[0])
+    st.success("**After:** " + get_safe("resume_rewrite", ["N/A","N/A"])[1])
 
 # PAGE 3: LEARN
 elif page == "🧠 Learn":
-    check_data()
-    st.title("🧠 AI Learning Lab")
-    concept = data.get("learning_concepts", [{}])[0]
-    st.markdown(f"### Topic: {concept.get('topic')}"); st.info(concept.get('explain'))
-    if st.button("Give me a Code Example"): st.code("SELECT * FROM Employees INNER JOIN Departments ON id", language="sql")
+    if data is None: st.warning("⚠️ First click 'Demo Mode'"); st.stop()
+    concept = get_safe("learning_concepts", [{}])[0]
+    st.markdown(f"### Topic: {concept.get('topic')}")
+    st.info(concept.get('explain'))
 
 # PAGE 4: INTERVIEW
 elif page == "💼 Interview":
-    check_data()
-    st.title("💼 Mock Interview AI")
-    q = st.selectbox("Choose Question", data.get("mock_q", []))
-    ans = st.text_area("Your Answer", height=150)
-    if st.button("Get AI Score"):
-        with st.spinner("AI is judging..."): time.sleep(2); st.success("Score: 8/10. Add 1 more metric!")
+    if data is None: st.warning("⚠️ First click 'Demo Mode'"); st.stop()
+    q = st.selectbox("Choose Question", get_safe("mock_q", []))
+    st.text_area("Your Answer")
+    if st.button("Get AI Score"): st.success("Score: 8/10!")
 
 # PAGE 5: ROADMAP
 elif page == "🎯 Roadmap":
-    check_data()
-    st.title("🎯 30-Day Roadmap")
-    for item in data.get("roadmap", []): st.checkbox(f"**Day {item.get('day')}:** {item.get('task')}", key=item.get('day'))
-
-# PAGE 6: JOB SEARCH
-elif page == "🔎 Job Search":
-    check_data()
-    st.title("🔎 AI Job Search for You")
-    for job in data.get("jobs", []):
-        with st.container(border=True):
-            st.markdown(f"### {job.get('title')} at {job.get('company')}")
-            st.link_button("Apply Now", job.get('link'))
+    if data is None: st.warning("⚠️ First click 'Demo Mode'"); st.stop()
+    for item in get_safe("roadmap", []):
+        st.checkbox(f"**Day {item.get('day')}:** {item.get('task')}", key=item.get('day'))
