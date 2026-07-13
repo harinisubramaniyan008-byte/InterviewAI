@@ -5,4 +5,4 @@ pdfplumber
 python-docx
 google-generativeai
 mysql-connector-python
-groq
+groq>=0.11.0
