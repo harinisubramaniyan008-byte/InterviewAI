@@ -10,7 +10,7 @@ st.set_page_config(page_title="AI Career Coach TECH PRO", layout="wide", page_ic
 
 st.markdown("""
 <style>
-.metric-card {background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 15px; color: white; text-align: center;}
+.metric-card {background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 15px; color: white; text-align: center; height: 150px;}
 .big-card {background-color: #FFFFFF; padding: 20px; border-radius: 15px; margin-bottom: 20px; border: 1px solid #E2E8F0;}
 </style>
 """, unsafe_allow_html=True)
@@ -21,7 +21,7 @@ st.caption("Your All-in-One AI Career OS | Learn. Build. Get Hired.")
 try:
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 except:
-    st.error("Please add GROQ_API_KEY in Streamlit Secrets")
+    st.error("⚠️ Please add GROQ_API_KEY in Streamlit Secrets → Settings")
     st.stop()
 
 def read_pdf(file):
@@ -35,23 +35,24 @@ def read_pdf(file):
 @st.cache_data(show_spinner="AI Analyzing Your Career... 40 seconds")
 def get_full_analysis(resume_text, location):
     prompt = f"""
-    Return ONLY valid JSON. Do not miss any key.
+    You are a Senior AI Career Coach. Return ONLY valid JSON. Do not miss any key.
     RESUME: {resume_text}
     LOCATION: {location}
 
+    JSON FORMAT:
     {{
       "ats_score": 78,
       "ats_breakdown": {{"Keywords": 75, "Experience": 80, "Education": 90, "Skills": 70}},
       "skill_radar_you": {{"Python": 8, "SQL": 7, "PowerBI": 3, "ML": 4, "Excel": 9}},
       "skill_radar_job": {{"Python": 9, "SQL": 9, "PowerBI": 8, "ML": 7, "Excel": 8}},
-      "companies": [{{"name": "Zoho", "openings": 23}}, {{"name": "TCS", "openings": 45}}],
-      "salary_roi": [{{"skill": "PowerBI", "salary_hike": "+22%"}}],
-      "resume_rewrite": ["Old: Did work", "New: Improved process by 40%"],
+      "companies": [{{"name": "Zoho", "openings": 23}}, {{"name": "TCS", "openings": 45}}, {{"name": "Freshworks", "openings": 12}}],
+      "salary_roi": [{{"skill": "PowerBI", "salary_hike": "+22%"}}, {{"skill": "Machine Learning", "salary_hike": "+35%"}}],
+      "resume_rewrite": ["Old: Worked on data analysis", "New: Analyzed 10GB+ of sales data using Python & SQL, improving reporting speed by 40%"],
       "competitor_rank": 23,
-      "learning_concepts": [{{"topic": "SQL Join", "explain": "Join is like venn diagram. 4 types: Inner, Left, Right, Full."}}],
-      "mock_q": ["Tell me about a time you used Python", "What is ETL?"],
-      "roadmap": [{{"day": 1, "task": "Learn SQL Basics"}, {{"day": 2, "task": "Practice 5 Queries"}}],
-      "motivation": "You are currently Top 23%. To reach Top 1%, master PowerBI in 14 days. You can do it!"
+      "learning_concepts": [{{"topic": "SQL JOIN", "explain": "A JOIN combines rows from two tables. INNER JOIN = common data. LEFT JOIN = all from left + matching from right."}}],
+      "mock_q": ["Tell me about a time you used Python to solve a problem", "Explain the difference between INNER JOIN and LEFT JOIN", "What is ETL and why is it important?"],
+      "roadmap": [{{"day": 1, "task": "Master SQL Basics: SELECT, WHERE, GROUP BY"}}, {{"day": 2, "task": "Practice 10 SQL JOIN questions on LeetCode"}}, {{"day": 3, "task": "Build 1 PowerBI Dashboard Project"}}],
+      "motivation": "You are currently in the Top 23%. To reach Top 1%, master PowerBI in the next 14 days. The market is hiring. You can do this!"
     }}
     """
     response = client.chat.completions.create(
@@ -67,7 +68,8 @@ def get_full_analysis(resume_text, location):
 with st.sidebar:
     st.header("Step 1: Upload Resume")
     resume_file = st.file_uploader("Upload PDF", type=["pdf"])
-    location = st.selectbox("Target City", ["Chennai", "Bangalore", "Hyderabad", "Pune"])
+    st.header("Step 2: Target City")
+    location = st.selectbox("", ["Chennai", "Bangalore", "Hyderabad", "Pune", "Mumbai"])
 
 if resume_file:
     if st.button("🚀 Generate Full Report", use_container_width=True, type="primary"):
@@ -95,7 +97,7 @@ if 'data' in st.session_state:
     # 8 TABS - MUNNADI 4 + PUDHU 4
     tabs = st.tabs(["📊 Skill Analytics", "🏢 Market Data", "✍️ AI Tools", "📈 Salary ROI", "🧠 AI Learning Lab", "💼 Mock Interview", "🎯 30-Day Roadmap", "🔥 Motivation"])
 
-    with tabs[0]: # 1. OLD - SKILL
+    with tabs[0]:
         st.subheader("Your Skills vs Job Market Demand")
         you = data.get("skill_radar_you", {})
         job = data.get("skill_radar_job", {})
@@ -104,54 +106,55 @@ if 'data' in st.session_state:
             fig = go.Figure()
             fig.add_trace(go.Scatterpolar(r=df_radar['You'], theta=df_radar['Skill'], fill='toself', name='Your Skills'))
             fig.add_trace(go.Scatterpolar(r=df_radar['Job Demand'], theta=df_radar['Skill'], fill='toself', name='Job Demand'))
-            fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 10])), height=400)
+            fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 10])), height=400, legend=dict(orientation="h"))
             st.plotly_chart(fig, use_container_width=True)
 
-    with tabs[1]: # 2. OLD - MARKET
+    with tabs[1]:
         st.subheader(f"Hiring Trend in {location}")
         if companies:
             df_comp = pd.DataFrame(companies)
-            fig2 = px.bar(df_comp, x='name', y='openings', color='openings', title="Active Job Openings")
+            fig2 = px.bar(df_comp, x='name', y='openings', color='openings', title="Active Job Openings Now")
             st.plotly_chart(fig2, use_container_width=True)
 
-    with tabs[2]: # 3. OLD - AI TOOLS
+    with tabs[2]:
         st.subheader("AI Resume Bullet Rewriter")
         rewrite = data.get("resume_rewrite", ["N/A", "N/A"])
         st.write("**Before:**", rewrite[0])
         st.success("**After ATS Optimized:** " + rewrite[1])
 
-    with tabs[3]: # 4. OLD - SALARY
+    with tabs[3]:
         st.subheader("Skill = Money. Learn this, earn more.")
         roi = data.get("salary_roi", [])
         if roi: st.dataframe(pd.DataFrame(roi), use_container_width=True)
 
-    with tabs[4]: # 5. NEW - LEARNING LAB
-        st.subheader("🧠 AI Learning Lab - Ask Anything")
+    with tabs[4]:
+        st.subheader("🧠 AI Learning Lab - Technical Concept in 30 Sec")
         concept = data.get("learning_concepts", [{}])[0]
         st.markdown(f"### Topic: {concept.get('topic', 'N/A')}")
         st.info(concept.get('explain', 'N/A'))
-        st.caption("This explains complex tech in 30 seconds so you never forget.")
+        st.caption("Complex topics made simple. So you remember forever.")
 
-    with tabs[5]: # 6. NEW - MOCK INTERVIEW
+    with tabs[5]:
         st.subheader("💼 AI Mock Interview Simulator")
-        st.write("Practice before the real one. AI will score you.")
+        st.write("Answer these. Imagine it's the real interview.")
         mock_q = data.get("mock_q", [])
         for i, q in enumerate(mock_q, 1):
             with st.expander(f"Question {i}: {q}"):
                 st.text_area("Type your answer here...", key=f"ans{i}")
                 if st.button("Get AI Feedback", key=f"btn{i}"):
-                    st.success("AI Feedback: Good answer! Add 1 more example to get 9/10.")
+                    st.success("AI Feedback: Good structure! Add 1 metric to make it a 10/10 answer.")
 
-    with tabs[6]: # 7. NEW - ROADMAP
+    with tabs[6]:
         st.subheader("🎯 Your Personal 30-Day Job Ready Roadmap")
+        st.write("Check them off as you complete. Stay consistent.")
         roadmap = data.get("roadmap", [])
         for item in roadmap:
             st.checkbox(f"**Day {item.get('day')}:** {item.get('task')}", key=item.get('day'))
 
-    with tabs[7]: # 8. NEW - MOTIVATION
+    with tabs[7]:
         st.subheader("🔥 Daily Career Motivation")
-        st.markdown(f'<div class="big-card"><h3>{data.get("motivation", "Keep Going!")}</h3></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="big-card"><h3 style="text-align: center;">{data.get("motivation", "Keep Going!")}</h3></div>', unsafe_allow_html=True)
         st.balloons()
 
 else:
-    st.info("👈 Step 1: Upload resume \n\n Step 2: Click 'Generate Full Report'")
+    st.info("👈 Step 1: Upload your resume PDF in the sidebar \n\n Step 2: Click 'Generate Full Report'")
