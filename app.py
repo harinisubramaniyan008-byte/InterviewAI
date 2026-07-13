@@ -1,24 +1,24 @@
 import streamlit as st
 from groq import Groq
 import pdfplumber
-from docx import Document
 import pandas as pd
+import plotly.express as px
 import plotly.graph_objects as go
 import json
-import re
+import random
 
-st.set_page_config(page_title="AI Career Coach Pro", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="AI Career Coach TECH PRO", layout="wide", page_icon="🚀")
 
-# CSS for trending look
+# PRO CSS
 st.markdown("""
 <style>
-.big-card {background-color: #1E293B; padding: 20px; border-radius: 15px; margin-bottom: 20px;}
-.metric-card {background-color: #0F172A; padding: 15px; border-radius: 10px; text-align: center;}
+.metric-card {background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 15px; color: white;}
+.big-card {background-color: #FFFFFF; padding: 20px; border-radius: 15px; margin-bottom: 20px; border: 1px solid #E2E8F0; box-shadow: 0 4px 6px rgba(0,0,0,0.1);}
 </style>
 """, unsafe_allow_html=True)
 
-st.title("🚀 AI Career Coach PRO Dashboard")
-st.caption("Upload once. Get everything. Built for 2026.")
+st.title("🚀 AI Career Coach TECH PRO")
+st.caption("AI-Powered Career Intelligence Dashboard | Built for 2026")
 
 try:
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
@@ -33,102 +33,86 @@ def read_pdf(file):
             text += page.extract_text() + "\n"
     return text
 
-@st.cache_data
-def get_ai_analysis(resume_text, location):
+@st.cache_data(show_spinner="AI Analyzing...")
+def get_pro_analysis(resume_text, location):
     prompt = f"""
-    You are a Senior AI Career Coach. Return ONLY valid JSON. No extra text.
-
+    Return ONLY JSON. Be technical and data-driven.
     RESUME: {resume_text}
     LOCATION: {location}
 
-    Return JSON with these keys:
-    "ats_score": int,
-    "ats_breakdown": {{"Keywords": int, "Experience": int, "Education": int, "Skills": int}},
-    "strengths": [3 points],
-    "weaknesses": [3 points],
-    "top_companies": [{{"name": "", "why": ""}} x 5],
-    "missing_skills": [{{"skill": "", "course": ""}} x 5],
-    "salary": [{{"role": "", "fresher": "", "mid": "", "senior": ""}} x 3],
-    "interview_q": [5 questions],
-    "job_match": [{{"title": "", "percent": int}} x 5]
+    JSON format:
+    {{
+      "ats_score": 78,
+      "ats_breakdown": {{"Keywords": 75, "Experience": 80, "Education": 90, "Skills": 70}},
+      "skill_radar_you": {{"Python": 8, "SQL": 7, "PowerBI": 3, "ML": 4, "Excel": 9}},
+      "skill_radar_job": {{"Python": 9, "SQL": 9, "PowerBI": 8, "ML": 7, "Excel": 8}},
+      "companies": [{{"name": "Zoho", "openings": 23}}, {{"name": "TCS", "openings": 45}}],
+      "salary_roi": [{{"skill": "PowerBI", "salary_hike": "+22%"}}, {{"skill": "ML", "salary_hike": "+35%"}}],
+      "resume_rewrite": ["Old: Worked on data", "New: Analyzed 10GB+ data using Python & SQL, improved reporting speed by 40%"],
+      "competitor_rank": 23
+    }}
     """
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
         messages=[{"role": "user", "content": prompt}],
-        temperature=0.2,
+        temperature=0.1,
         max_tokens=3000,
-        response_format={"type": "json_object"} # JSON la varanum
+        response_format={"type": "json_object"}
     )
     return json.loads(response.choices[0].message.content)
 
 # SIDEBAR
 with st.sidebar:
-    st.header("1. Upload Resume")
-    resume_file = st.file_uploader("PDF / DOCX", type=["pdf", "docx"])
-    st.header("2. Target Location")
-    location = st.selectbox("", ["Chennai", "Bangalore", "Hyderabad", "Pune", "Mumbai", "Remote"])
+    st.header("Upload Resume")
+    resume_file = st.file_uploader("PDF", type=["pdf"])
+    location = st.selectbox("Target City", ["Chennai", "Bangalore", "Hyderabad"])
 
-if resume_file and st.button("🚀 Generate Dashboard", use_container_width=True):
-    with st.spinner("AI is building your dashboard..."):
-        if resume_file.type == "application/pdf":
-            resume_text = read_pdf(resume_file)
-        else:
-            resume_text = Document(resume_file)
-            resume_text = "\n".join([para.text for para in resume_text.paragraphs])
-
-        data = get_ai_analysis(resume_text, location)
-        st.session_state.data = data
+if resume_file and st.button("🚀 Generate Tech Report", use_container_width=True, type="primary"):
+    resume_text = read_pdf(resume_file)
+    data = get_pro_analysis(resume_text, location)
+    st.session_state.data = data
 
 if 'data' in st.session_state:
     data = st.session_state.data
 
-    # TABS - TRENDING UI
-    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Overview", "🏢 Companies", "📈 Skills & Salary", "❓ Interview", "🎯 Actions"])
+    # TOP METRICS
+    col1, col2, col3 = st.columns(3)
+    with col1: st.markdown(f'<div class="metric-card"><h3>ATS Score</h3><h1>{data["ats_score"]}/100</h1></div>', unsafe_allow_html=True)
+    with col2: st.markdown(f'<div class="metric-card"><h3>Market Rank</h3><h1>Top {data["competitor_rank"]}%</h1></div>', unsafe_allow_html=True)
+    with col3: st.markdown(f'<div class="metric-card"><h3>Companies</h3><h1>{len(data["companies"])} Hiring</h1></div>', unsafe_allow_html=True)
 
-    with tab1: # OVERVIEW
-        st.subheader("Instant ATS Score")
-        col1, col2 = st.columns([1,2])
-        with col1:
-            st.metric("Overall Score", f"{data['ats_score']}/100")
-        with col2:
-            # Radar Chart
-            fig = go.Figure(data=go.Scatterpolar(
-                r=list(data['ats_breakdown'].values()),
-                theta=list(data['ats_breakdown'].keys()),
-                fill='toself'
-            ))
-            fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 100])), showlegend=False, height=300)
-            st.plotly_chart(fig, use_container_width=True)
+    st.write("")
 
-        st.markdown('<div class="big-card">', unsafe_allow_html=True)
-        c1, c2 = st.columns(2)
-        with c1: st.write("**✅ Strengths**"); [st.write(f"- {s}") for s in data['strengths']]
-        with c2: st.write("**❌ Weaknesses**"); [st.write(f"- {w}") for w in data['weaknesses']]
-        st.markdown('</div>', unsafe_allow_html=True)
+    tab1, tab2, tab3, tab4 = st.tabs(["📊 Skill Analytics", "🏢 Market Data", "✍️ AI Tools", "📈 Salary ROI"])
 
-    with tab2: # COMPANIES
-        st.subheader(f"Top 5 Companies Hiring in {location}")
-        for comp in data['top_companies']:
-            st.markdown(f'<div class="big-card"><h4>{comp["name"]}</h4><p>{comp["why"]}</p></div>', unsafe_allow_html=True)
+    with tab1: # TECHNICAL GRAPH
+        st.subheader("Your Skills vs Job Market Demand")
+        df_radar = pd.DataFrame({
+            'Skill': list(data['skill_radar_you'].keys()),
+            'You': list(data['skill_radar_you'].values()),
+            'Job Demand': list(data['skill_radar_job'].values())
+        })
+        fig = go.Figure()
+        fig.add_trace(go.Scatterpolar(r=df_radar['You'], theta=df_radar['Skill'], fill='toself', name='Your Skills'))
+        fig.add_trace(go.Scatterpolar(r=df_radar['Job Demand'], theta=df_radar['Skill'], fill='toself', name='Job Demand'))
+        fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 10])), height=400)
+        st.plotly_chart(fig, use_container_width=True)
 
-    with tab3: # SKILLS
-        st.subheader("Skill Gap & Learning Path")
-        for skill in data['missing_skills']:
-            st.info(f"**Missing: {skill['skill']}** → Learn here: {skill['course']}")
+    with tab2: # COMPANY CHART
+        st.subheader(f"Hiring Trend in {location}")
+        df_comp = pd.DataFrame(data['companies'])
+        fig2 = px.bar(df_comp, x='name', y='openings', color='openings', title="Active Job Openings")
+        st.plotly_chart(fig2, use_container_width=True)
 
-        st.subheader("Salary Benchmark in INR")
-        df = pd.DataFrame(data['salary'])
-        st.dataframe(df, use_container_width=True)
+    with tab3: # AI REWRITER
+        st.subheader("AI Resume Bullet Rewriter")
+        st.write("**Before:**", data['resume_rewrite'][0])
+        st.success("**After ATS Optimization:** " + data['resume_rewrite'][1])
 
-    with tab4: # INTERVIEW
-        st.subheader("Top 5 Predicted Interview Questions")
-        for i, q in enumerate(data['interview_q'], 1):
-            st.write(f"{i}. {q}")
-
-    with tab5: # JOB MATCH
-        st.subheader("Best Job Matches For You")
-        for job in data['job_match']:
-            st.progress(job['percent']/100, text=f"{job['title']} - {job['percent']}% Match")
+    with tab4: # SALARY
+        st.subheader("Skill = Money. Learn this, earn more.")
+        df_roi = pd.DataFrame(data['salary_roi'])
+        st.dataframe(df_roi, use_container_width=True)
 
 else:
-    st.info("Upload your resume and click 'Generate Dashboard' to start")
+    st.info("👈 Upload resume in sidebar to unlock the Tech Dashboard")
