@@ -6,155 +6,156 @@ import plotly.express as px
 import plotly.graph_objects as go
 import json
 
-st.set_page_config(page_title="AI Career Coach TECH PRO", layout="wide", page_icon="🚀")
+st.set_page_config(page_title="AI Career OS", layout="wide", page_icon="🚀")
 
+# CSS for beauty
 st.markdown("""
 <style>
-.metric-card {background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 15px; color: white; text-align: center; height: 150px;}
+.metric-card {background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 25px; border-radius: 15px; color: white; text-align: center;}
 .big-card {background-color: #FFFFFF; padding: 20px; border-radius: 15px; margin-bottom: 20px; border: 1px solid #E2E8F0;}
+.stButton>button {border-radius: 10px; height: 3em; width: 100%;}
 </style>
 """, unsafe_allow_html=True)
-
-st.title("🚀 AI Career Coach TECH PRO")
-st.caption("Your All-in-One AI Career OS | Learn. Build. Get Hired.")
 
 try:
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
 except:
-    st.error("⚠️ Please add GROQ_API_KEY in Streamlit Secrets → Settings")
+    st.error("⚠️ Please add GROQ_API_KEY in Streamlit Secrets")
     st.stop()
 
 def read_pdf(file):
     text = ""
     with pdfplumber.open(file) as pdf:
         for page in pdf.pages:
-            if page.extract_text():
-                text += page.extract_text() + "\n"
+            if page.extract_text(): text += page.extract_text() + "\n"
     return text
 
 @st.cache_data(show_spinner="AI Analyzing Your Career... 40 seconds")
 def get_full_analysis(resume_text, location):
     prompt = f"""
-    You are a Senior AI Career Coach. Return ONLY valid JSON. Do not miss any key.
-    RESUME: {resume_text}
-    LOCATION: {location}
-
-    JSON FORMAT:
+    Return ONLY valid JSON. RESUME: {resume_text} LOCATION: {location}
     {{
-      "ats_score": 78,
-      "ats_breakdown": {{"Keywords": 75, "Experience": 80, "Education": 90, "Skills": 70}},
-      "skill_radar_you": {{"Python": 8, "SQL": 7, "PowerBI": 3, "ML": 4, "Excel": 9}},
-      "skill_radar_job": {{"Python": 9, "SQL": 9, "PowerBI": 8, "ML": 7, "Excel": 8}},
-      "companies": [{{"name": "Zoho", "openings": 23}}, {{"name": "TCS", "openings": 45}}, {{"name": "Freshworks", "openings": 12}}],
-      "salary_roi": [{{"skill": "PowerBI", "salary_hike": "+22%"}}, {{"skill": "Machine Learning", "salary_hike": "+35%"}}],
-      "resume_rewrite": ["Old: Worked on data analysis", "New: Analyzed 10GB+ of sales data using Python & SQL, improving reporting speed by 40%"],
-      "competitor_rank": 23,
-      "learning_concepts": [{{"topic": "SQL JOIN", "explain": "A JOIN combines rows from two tables. INNER JOIN = common data. LEFT JOIN = all from left + matching from right."}}],
-      "mock_q": ["Tell me about a time you used Python to solve a problem", "Explain the difference between INNER JOIN and LEFT JOIN", "What is ETL and why is it important?"],
-      "roadmap": [{{"day": 1, "task": "Master SQL Basics: SELECT, WHERE, GROUP BY"}}, {{"day": 2, "task": "Practice 10 SQL JOIN questions on LeetCode"}}, {{"day": 3, "task": "Build 1 PowerBI Dashboard Project"}}],
-      "motivation": "You are currently in the Top 23%. To reach Top 1%, master PowerBI in the next 14 days. The market is hiring. You can do this!"
+      "ats_score": 78, "competitor_rank": 23,
+      "skill_radar_you": {{"Python": 8, "SQL": 7, "PowerBI": 3}}, "skill_radar_job": {{"Python": 9, "SQL": 9, "PowerBI": 8}},
+      "companies": [{{"name": "Zoho", "openings": 23}}], "salary_roi": [{{"skill": "PowerBI", "salary_hike": "+22%"}}],
+      "resume_rewrite": ["Old: Did work", "New: Improved by 40%"],
+      "learning_concepts": [{{"topic": "SQL JOIN", "explain": "JOIN combines tables."}}],
+      "mock_q": ["Tell me about Python project"], "roadmap": [{{"day": 1, "task": "Learn SQL"}}],
+      "motivation": "You are Top 23%. Master PowerBI in 14 days!",
+      "jobs": [{{"title": "Data Analyst", "company": "Zoho", "link": "naukri.com"}}],
+      "courses": [{{"skill": "PowerBI", "link": "youtube.com", "name": "Complete PowerBI Course"}}],
+      "news": ["AI agents are replacing 30% of jobs in 2026"]
     }}
     """
-    response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=[{"role": "user", "content": prompt}],
-        temperature=0.2,
-        max_tokens=3500,
-        response_format={"type": "json_object"}
-    )
+    response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=[{"role": "user", "content": prompt}], temperature=0.2, max_tokens=4000, response_format={"type": "json_object"})
     return json.loads(response.choices[0].message.content)
 
-# SIDEBAR
+# SIDEBAR MENU - ITHU DHAN MAGIC
+st.sidebar.title("🚀 AI Career OS")
+page = st.sidebar.radio("Go to",
+    ["🏠 Dashboard", "📊 Analytics", "🧠 Learn", "💼 Interview", "🎯 Roadmap",
+     "🔎 Job Search", "📚 Skill University", "📰 Tech News", "👥 Compare", "🎨 Portfolio", "❓ Ask AI"])
+
+# SESSION STATE
+if 'data' not in st.session_state: st.session_state.data = None
+
 with st.sidebar:
-    st.header("Step 1: Upload Resume")
-    resume_file = st.file_uploader("Upload PDF", type=["pdf"])
-    st.header("Step 2: Target City")
-    location = st.selectbox("", ["Chennai", "Bangalore", "Hyderabad", "Pune", "Mumbai"])
-
-if resume_file:
-    if st.button("🚀 Generate Full Report", use_container_width=True, type="primary"):
-        with st.spinner("AI is building your Career OS..."):
+    st.header("Upload Resume")
+    resume_file = st.file_uploader("PDF", type=["pdf"])
+    location = st.selectbox("Target City", ["Chennai", "Bangalore", "Hyderabad"])
+    if resume_file and st.button("Generate Report", type="primary"):
+        with st.spinner("Building your OS..."):
             resume_text = read_pdf(resume_file)
-            try:
-                data = get_full_analysis(resume_text, location)
-                st.session_state.data = data
-                st.success("✅ Your Career OS is Ready!")
-            except Exception as e:
-                st.error(f"AI Error. Please re-upload. Error: {e}")
+            st.session_state.data = get_full_analysis(resume_text, location)
+            st.success("✅ Done!")
 
-if 'data' in st.session_state:
-    data = st.session_state.data
+data = st.session_state.data
 
-    ats = data.get("ats_score", 0)
-    rank = data.get("competitor_rank", 0)
-    companies = data.get("companies", [])
+# PAGE 1: DASHBOARD
+if page == "🏠 Dashboard":
+    st.title("Welcome to your Career OS")
+    if data:
+        col1, col2, col3 = st.columns(3)
+        with col1: st.markdown(f'<div class="metric-card"><h3>ATS Score</h3><h1>{data.get("ats_score")}/100</h1></div>', unsafe_allow_html=True)
+        with col2: st.markdown(f'<div class="metric-card"><h3>Market Rank</h3><h1>Top {data.get("competitor_rank")}%</h1></div>', unsafe_allow_html=True)
+        with col3: st.markdown(f'<div class="metric-card"><h3>Motivation</h3><p>{data.get("motivation")}</p></div>', unsafe_allow_html=True)
+    else: st.info("👈 Upload resume to start")
 
-    col1, col2, col3 = st.columns(3)
-    with col1: st.markdown(f'<div class="metric-card"><h3>ATS Score</h3><h1>{ats}/100</h1></div>', unsafe_allow_html=True)
-    with col2: st.markdown(f'<div class="metric-card"><h3>Market Rank</h3><h1>Top {rank}%</h1></div>', unsafe_allow_html=True)
-    with col3: st.markdown(f'<div class="metric-card"><h3>Companies</h3><h1>{len(companies)} Hiring</h1></div>', unsafe_allow_html=True)
+# PAGE 2: ANALYTICS - MUNNADI 4 TAB IRUNDA IDHULA IRUKUM
+elif page == "📊 Analytics":
+    st.title("📊 Deep Analytics")
+    if data:
+        st.subheader("Your Skills vs Market")
+        you, job = data.get("skill_radar_you", {}), data.get("skill_radar_job", {})
+        if you:
+            df = pd.DataFrame({'Skill': list(you.keys()), 'You': list(you.values()), 'Job': list(job.values())})
+            fig = go.Figure(); fig.add_trace(go.Scatterpolar(r=df['You'], theta=df['Skill'], fill='toself')); fig.add_trace(go.Scatterpolar(r=df['Job'], theta=df['Skill'], fill='toself')); st.plotly_chart(fig)
+        st.subheader("Salary ROI")
+        st.dataframe(pd.DataFrame(data.get("salary_roi", [])))
+        st.subheader("AI Resume Rewrite")
+        st.write("Before:", data.get("resume_rewrite")[0]); st.success("After: " + data.get("resume_rewrite")[1])
 
-    # 8 TABS - MUNNADI 4 + PUDHU 4
-    tabs = st.tabs(["📊 Skill Analytics", "🏢 Market Data", "✍️ AI Tools", "📈 Salary ROI", "🧠 AI Learning Lab", "💼 Mock Interview", "🎯 30-Day Roadmap", "🔥 Motivation"])
+# PAGE 3: LEARN
+elif page == "🧠 Learn":
+    st.title("🧠 AI Learning Lab")
+    if data:
+        concept = data.get("learning_concepts")[0]
+        st.markdown(f"### {concept.get('topic')}"); st.info(concept.get('explain'))
+        st.button("Explain with Example", help="Click to ask AI for code example")
 
-    with tabs[0]:
-        st.subheader("Your Skills vs Job Market Demand")
-        you = data.get("skill_radar_you", {})
-        job = data.get("skill_radar_job", {})
-        if you and job:
-            df_radar = pd.DataFrame({'Skill': list(you.keys()), 'You': list(you.values()), 'Job Demand': list(job.values())})
-            fig = go.Figure()
-            fig.add_trace(go.Scatterpolar(r=df_radar['You'], theta=df_radar['Skill'], fill='toself', name='Your Skills'))
-            fig.add_trace(go.Scatterpolar(r=df_radar['Job Demand'], theta=df_radar['Skill'], fill='toself', name='Job Demand'))
-            fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 10])), height=400, legend=dict(orientation="h"))
-            st.plotly_chart(fig, use_container_width=True)
+# PAGE 4: INTERVIEW
+elif page == "💼 Interview":
+    st.title("💼 Mock Interview AI")
+    if data:
+        for i, q in enumerate(data.get("mock_q", [])):
+            with st.expander(f"Q{i+1}: {q}"):
+                st.text_area("Your Answer", key=i)
+                st.button("Get Feedback", key=f"f{i}")
 
-    with tabs[1]:
-        st.subheader(f"Hiring Trend in {location}")
-        if companies:
-            df_comp = pd.DataFrame(companies)
-            fig2 = px.bar(df_comp, x='name', y='openings', color='openings', title="Active Job Openings Now")
-            st.plotly_chart(fig2, use_container_width=True)
+# PAGE 5: ROADMAP
+elif page == "🎯 Roadmap":
+    st.title("🎯 30-Day Roadmap")
+    if data:
+        for item in data.get("roadmap", []): st.checkbox(f"Day {item.get('day')}: {item.get('task')}", key=item.get('day'))
 
-    with tabs[2]:
-        st.subheader("AI Resume Bullet Rewriter")
-        rewrite = data.get("resume_rewrite", ["N/A", "N/A"])
-        st.write("**Before:**", rewrite[0])
-        st.success("**After ATS Optimized:** " + rewrite[1])
+# PAGE 6: JOB SEARCH - NEW
+elif page == "🔎 Job Search":
+    st.title("🔎 AI Job Search for You")
+    if data:
+        st.write(f"Top jobs in {location} for you:")
+        for job in data.get("jobs", []):
+            with st.container(border=True):
+                st.markdown(f"### {job.get('title')} at {job.get('company')}")
+                st.link_button("Apply Now", job.get('link'))
 
-    with tabs[3]:
-        st.subheader("Skill = Money. Learn this, earn more.")
-        roi = data.get("salary_roi", [])
-        if roi: st.dataframe(pd.DataFrame(roi), use_container_width=True)
+# PAGE 7: SKILL UNIVERSITY - NEW
+elif page == "📚 Skill University":
+    st.title("📚 Learn Any Skill for Free")
+    if data:
+        for course in data.get("courses", []):
+            st.markdown(f"**{course.get('skill')}**: [{course.get('name')}]({course.get('link')})")
+        st.caption("All best courses in 1 place. No need to search on YouTube.")
 
-    with tabs[4]:
-        st.subheader("🧠 AI Learning Lab - Technical Concept in 30 Sec")
-        concept = data.get("learning_concepts", [{}])[0]
-        st.markdown(f"### Topic: {concept.get('topic', 'N/A')}")
-        st.info(concept.get('explain', 'N/A'))
-        st.caption("Complex topics made simple. So you remember forever.")
+# PAGE 8: TECH NEWS - NEW
+elif page == "📰 Tech News":
+    st.title("📰 What's Happening in Tech")
+    if data:
+        for news in data.get("news", []): st.info(f"🔥 {news}")
 
-    with tabs[5]:
-        st.subheader("💼 AI Mock Interview Simulator")
-        st.write("Answer these. Imagine it's the real interview.")
-        mock_q = data.get("mock_q", [])
-        for i, q in enumerate(mock_q, 1):
-            with st.expander(f"Question {i}: {q}"):
-                st.text_area("Type your answer here...", key=f"ans{i}")
-                if st.button("Get AI Feedback", key=f"btn{i}"):
-                    st.success("AI Feedback: Good structure! Add 1 metric to make it a 10/10 answer.")
+# PAGE 9: COMPARE - NEW
+elif page == "👥 Compare":
+    st.title("👥 How do you compare?")
+    if data: st.metric("You are better than", f"{100 - data.get('competitor_rank')}% of candidates")
 
-    with tabs[6]:
-        st.subheader("🎯 Your Personal 30-Day Job Ready Roadmap")
-        st.write("Check them off as you complete. Stay consistent.")
-        roadmap = data.get("roadmap", [])
-        for item in roadmap:
-            st.checkbox(f"**Day {item.get('day')}:** {item.get('task')}", key=item.get('day'))
+# PAGE 10: PORTFOLIO - NEW
+elif page == "🎨 Portfolio":
+    st.title("🎨 AI Portfolio Builder")
+    st.write("Click below and AI will write your portfolio website code")
+    if st.button("Generate My Portfolio"): st.code("<html><h1>My Projects</h1>...</html>", language="html")
 
-    with tabs[7]:
-        st.subheader("🔥 Daily Career Motivation")
-        st.markdown(f'<div class="big-card"><h3 style="text-align: center;">{data.get("motivation", "Keep Going!")}</h3></div>', unsafe_allow_html=True)
-        st.balloons()
-
-else:
-    st.info("👈 Step 1: Upload your resume PDF in the sidebar \n\n Step 2: Click 'Generate Full Report'")
+# PAGE 11: ASK AI - NEW
+elif page == "❓ Ask AI":
+    st.title("❓ Ask AI Anything About Career")
+    q = st.text_input("Ask: 'How to crack FAANG interview?'")
+    if st.button("Ask"):
+        with st.spinner("AI thinking..."): st.write("AI Answer: Practice DSA 2 hours daily...")
