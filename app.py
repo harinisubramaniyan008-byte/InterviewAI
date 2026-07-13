@@ -4,11 +4,21 @@ import pdfplumber
 from docx import Document
 import pandas as pd
 import plotly.graph_objects as go
+import json
+import re
 
-st.set_page_config(page_title="AI Career Coach 2.0", layout="wide")
+st.set_page_config(page_title="AI Career Coach Pro", layout="wide", page_icon="🚀")
 
-st.title("🤖 AI Career Coach 2.0")
-st.write("Upload your Resume. Get Instant ATS Score, Company List, Salary, and Learning Path.")
+# CSS for trending look
+st.markdown("""
+<style>
+.big-card {background-color: #1E293B; padding: 20px; border-radius: 15px; margin-bottom: 20px;}
+.metric-card {background-color: #0F172A; padding: 15px; border-radius: 10px; text-align: center;}
+</style>
+""", unsafe_allow_html=True)
+
+st.title("🚀 AI Career Coach PRO Dashboard")
+st.caption("Upload once. Get everything. Built for 2026.")
 
 try:
     client = Groq(api_key=st.secrets["GROQ_API_KEY"])
@@ -23,82 +33,102 @@ def read_pdf(file):
             text += page.extract_text() + "\n"
     return text
 
-def read_docx(file):
-    doc = Document(file)
-    return "\n".join([para.text for para in doc.paragraphs])
-
+@st.cache_data
 def get_ai_analysis(resume_text, location):
     prompt = f"""
-    You are a Senior AI Career Coach and Market Analyst. Be professional, technical, and data-driven.
+    You are a Senior AI Career Coach. Return ONLY valid JSON. No extra text.
 
-    RESUME:
-    {resume_text}
+    RESUME: {resume_text}
+    LOCATION: {location}
 
-    TARGET LOCATION: {location}
-
-    Analyze and return output in professional English with clear headings.
-
-    **MODULE 1: INSTANT ATS SCORE**
-    Give score /100 and show breakdown: Keywords, Experience, Format, Education. Also provide a JSON for radar chart: {{"Keywords": 80, "Experience": 60,...}}
-
-    **MODULE 2: AI FEEDBACK**
-    3 Key Strengths, 3 Critical Weaknesses, 3 Immediate Actions to Fix
-
-    **MODULE 3: TOP COMPANIES IN {location}**
-    List 10 companies hiring for roles matching this resume. Include Company Name, Why they fit, and 1 line about them.
-
-    **MODULE 4: SKILL GAP & LEARNING PATH**
-    Top 5 Missing Skills. For each: Why it matters + 1 Free Course Link + 1 Paid Course Link
-
-    **MODULE 5: SALARY BENCHMARK FOR {location}**
-    For top 3 matching roles. Give Fresher, 2-4 Years, 5+ Years salary range in INR
-
-    **MODULE 6: TOP 15 INTERVIEW QUESTIONS**
-    10 Technical + 5 HR questions predicted for this profile
-
-    **MODULE 7: RESUME REWRITE SUGGESTION**
-    Pick 3 weak bullet points from resume and rewrite them with metrics and action verbs
-
-    **MODULE 8: BEST JOB MATCHES**
-    Top 5 Job Titles this person fits for with Match %
-
-    **MODULE 9: LINKEDIN & NETWORKING STRATEGY**
-    3 steps to get noticed by recruiters in {location}
-
-    **MODULE 10: MARKET TREND**
-    Is demand for this profile increasing or decreasing? 1 key trend for 2026
-
-    Be specific. No generic advice.
+    Return JSON with these keys:
+    "ats_score": int,
+    "ats_breakdown": {{"Keywords": int, "Experience": int, "Education": int, "Skills": int}},
+    "strengths": [3 points],
+    "weaknesses": [3 points],
+    "top_companies": [{{"name": "", "why": ""}} x 5],
+    "missing_skills": [{{"skill": "", "course": ""}} x 5],
+    "salary": [{{"role": "", "fresher": "", "mid": "", "senior": ""}} x 3],
+    "interview_q": [5 questions],
+    "job_match": [{{"title": "", "percent": int}} x 5]
     """
-
     response = client.chat.completions.create(
         model="llama-3.3-70b-versatile",
-        messages=[{"role": "system", "content": "You are a professional AI Career Coach."},
-                  {"role": "user", "content": prompt}],
-        temperature=0.3,
-        max_tokens=4000
+        messages=[{"role": "user", "content": prompt}],
+        temperature=0.2,
+        max_tokens=3000,
+        response_format={"type": "json_object"} # JSON la varanum
     )
-    return response.choices[0].message.content
+    return json.loads(response.choices[0].message.content)
 
-# UI
-col1, col2 = st.columns([2,1])
-with col1:
-    resume_file = st.file_uploader("1. Upload Your Resume PDF/DOCX", type=["pdf", "docx", "txt"])
-with col2:
-    location = st.selectbox("2. Select Your Target Location", ["Chennai", "Bangalore", "Hyderabad", "Pune", "Mumbai", "Remote"])
+# SIDEBAR
+with st.sidebar:
+    st.header("1. Upload Resume")
+    resume_file = st.file_uploader("PDF / DOCX", type=["pdf", "docx"])
+    st.header("2. Target Location")
+    location = st.selectbox("", ["Chennai", "Bangalore", "Hyderabad", "Pune", "Mumbai", "Remote"])
 
-if st.button("🚀 Generate Full Career Report"):
-    if resume_file:
-        with st.spinner("AI is analyzing your profile... This takes 30 seconds"):
-            if resume_file.type == "application/pdf":
-                resume_text = read_pdf(resume_file)
-            elif resume_file.type == "application/vnd.openxmlformats-officedocument.wordprocessingml.document":
-                resume_text = read_docx(resume_file)
-            else:
-                resume_text = resume_file.read().decode("utf-8")
+if resume_file and st.button("🚀 Generate Dashboard", use_container_width=True):
+    with st.spinner("AI is building your dashboard..."):
+        if resume_file.type == "application/pdf":
+            resume_text = read_pdf(resume_file)
+        else:
+            resume_text = Document(resume_file)
+            resume_text = "\n".join([para.text for para in resume_text.paragraphs])
 
-            result = get_ai_analysis(resume_text, location)
-            st.success("✅ Report Generated Successfully!")
-            st.markdown(result)
-    else:
-        st.warning("Please upload your resume first")
+        data = get_ai_analysis(resume_text, location)
+        st.session_state.data = data
+
+if 'data' in st.session_state:
+    data = st.session_state.data
+
+    # TABS - TRENDING UI
+    tab1, tab2, tab3, tab4, tab5 = st.tabs(["📊 Overview", "🏢 Companies", "📈 Skills & Salary", "❓ Interview", "🎯 Actions"])
+
+    with tab1: # OVERVIEW
+        st.subheader("Instant ATS Score")
+        col1, col2 = st.columns([1,2])
+        with col1:
+            st.metric("Overall Score", f"{data['ats_score']}/100")
+        with col2:
+            # Radar Chart
+            fig = go.Figure(data=go.Scatterpolar(
+                r=list(data['ats_breakdown'].values()),
+                theta=list(data['ats_breakdown'].keys()),
+                fill='toself'
+            ))
+            fig.update_layout(polar=dict(radialaxis=dict(visible=True, range=[0, 100])), showlegend=False, height=300)
+            st.plotly_chart(fig, use_container_width=True)
+
+        st.markdown('<div class="big-card">', unsafe_allow_html=True)
+        c1, c2 = st.columns(2)
+        with c1: st.write("**✅ Strengths**"); [st.write(f"- {s}") for s in data['strengths']]
+        with c2: st.write("**❌ Weaknesses**"); [st.write(f"- {w}") for w in data['weaknesses']]
+        st.markdown('</div>', unsafe_allow_html=True)
+
+    with tab2: # COMPANIES
+        st.subheader(f"Top 5 Companies Hiring in {location}")
+        for comp in data['top_companies']:
+            st.markdown(f'<div class="big-card"><h4>{comp["name"]}</h4><p>{comp["why"]}</p></div>', unsafe_allow_html=True)
+
+    with tab3: # SKILLS
+        st.subheader("Skill Gap & Learning Path")
+        for skill in data['missing_skills']:
+            st.info(f"**Missing: {skill['skill']}** → Learn here: {skill['course']}")
+
+        st.subheader("Salary Benchmark in INR")
+        df = pd.DataFrame(data['salary'])
+        st.dataframe(df, use_container_width=True)
+
+    with tab4: # INTERVIEW
+        st.subheader("Top 5 Predicted Interview Questions")
+        for i, q in enumerate(data['interview_q'], 1):
+            st.write(f"{i}. {q}")
+
+    with tab5: # JOB MATCH
+        st.subheader("Best Job Matches For You")
+        for job in data['job_match']:
+            st.progress(job['percent']/100, text=f"{job['title']} - {job['percent']}% Match")
+
+else:
+    st.info("Upload your resume and click 'Generate Dashboard' to start")
