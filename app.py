@@ -46,7 +46,7 @@ if 'qs' not in st.session_state: st.session_state.qs = ""
 
 # SIDEBAR
 with st.sidebar:
-    st.title("🚀 AI Career OS PRO v10.4")
+    st.title("🚀 AI Career OS PRO v11.0")
     page = st.radio("Select Module", [
         "🏠 Dashboard",
         "🧠 AI Doubt Clear",
@@ -55,9 +55,10 @@ with st.sidebar:
         "💻 Code + SQL Lab",
         "🎯 Project Generator",
         "📊 Skill Gap Analyzer",
-        "🎮 Daily Challenge", # PUDHUDHU 1
-        "🔥 Motivation Dose", # PUDHUDHU 2
-        "📈 Salary Calculator" # PUDHUDHU 3
+        "🎮 Daily Challenge",
+        "🔥 Motivation Dose",
+        "📈 Salary Calculator",
+        "📚 7-Day Course Quest" # PUDHU IDHU
     ])
     st.divider()
     st.header("Step 1: Upload Resume")
@@ -154,7 +155,7 @@ elif page == "📊 Skill Gap Analyzer":
         gap = ask_ai(f"Compare this resume vs {job} job. List missing skills and give 30 day learning roadmap: {st.session_state.resume_text[:3000]}")
         st.markdown(gap)
 
-# PAGE 8: DAILY CHALLENGE - PUDHU CREATIVE
+# PAGE 8: DAILY CHALLENGE - CREATIVE
 elif page == "🎮 Daily Challenge":
     st.title("🎮 Daily Career Quest")
     st.write("Complete today’s mission and earn XP!")
@@ -176,7 +177,7 @@ elif page == "🎮 Daily Challenge":
             st.balloons()
     st.progress(0.65, text="Level 5: Career Grinder - 650 XP")
 
-# PAGE 9: MOTIVATION DOSE - PUDHU CREATIVE
+# PAGE 9: MOTIVATION DOSE - CREATIVE
 elif page == "🔥 Motivation Dose":
     st.title("🔥 AI Motivation + Meme Generator")
     st.write("Feeling low? Click and get fired up!")
@@ -190,7 +191,7 @@ elif page == "🔥 Motivation Dose":
             meme = ask_ai("Give 1 funny career meme line about 'resume rejection' in Tamil + English mix")
             st.warning(meme)
 
-# PAGE 10: SALARY CALCULATOR - PUDHU CREATIVE
+# PAGE 10: SALARY CALCULATOR - CREATIVE
 elif page == "📈 Salary Calculator":
     st.title("📈 'What If' Salary Calculator")
     st.write("Learn a skill and see your salary jump!")
@@ -202,3 +203,76 @@ elif page == "📈 Salary Calculator":
         hike = ask_ai(f"If a Civil Engineer with {current_salary} LPA salary learns {skill}, what is the average salary hike % in India 2026? Give answer in 1 line with new salary.")
         st.metric("AI Prediction", hike)
         st.info("Note: This is AI estimation based on market data")
+
+# PAGE 11: 7-DAY COURSE QUEST - PUDHU MODULE
+elif page == "📚 7-Day Course Quest":
+    st.title("📚 7-Day Course Quest")
+    st.write("Pick 1 Course. AI will give you full roadmap + daily tasks with XP")
+
+    course = st.selectbox("Choose Your Course", [
+        "PowerBI for Beginners",
+        "Python for Data Analysis",
+        "SQL Mastery",
+        "Revit Architecture Basics",
+        "Project Management with MS Project"
+    ])
+
+    if st.button("Generate My 7-Day Roadmap", type="primary"):
+        with st.spinner("AI is creating your personal course..."):
+            prompt = f"""
+            For the course '{course}', generate JSON only.
+            Format: {{
+            "overview": "2 line what you will learn",
+            "tools": ["Tool1", "Tool2"],
+            "project": "1 final project idea",
+            "tasks": [
+                {{"day": 1, "task": "Task 1", "xp": 50}},
+                {{"day": 2, "task": "Task 2", "xp": 50}},
+                {{"day": 3, "task": "Task 3", "xp": 50}},
+                {{"day": 4, "task": "Task 4", "xp": 50}},
+                {{"day": 5, "task": "Task 5", "xp": 50}},
+                {{"day": 6, "task": "Task 6", "xp": 50}},
+                {{"day": 7, "task": "Final Project + Portfolio Update", "xp": 100}}
+            ]
+            }}
+            """
+            result = ask_ai(prompt)
+            data = extract_json(result)
+
+        if data:
+            st.success(f"Roadmap Generated for: {course}")
+
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                with st.container(border=True):
+                    st.subheader("🎯 What You'll Learn")
+                    st.write(data.get("overview"))
+            with col2:
+                with st.container(border=True):
+                    st.subheader("🛠️ Tools Used")
+                    for tool in data.get("tools",[]):
+                        st.markdown(f'- {tool}')
+            with col3:
+                with st.container(border=True):
+                    st.subheader("🏆 Final Project")
+                    st.write(data.get("project"))
+
+            st.divider()
+            st.subheader("🗓️ Your 7 Day Task List")
+
+            total_xp = 0
+            for task in data.get("tasks", []):
+                with st.container(border=True):
+                    colA, colB = st.columns([0.8, 0.2])
+                    with colA:
+                        st.markdown(f"**Day {task['day']}:** {task['task']}")
+                        if st.checkbox(f"Mark Day {task['day']} Complete", key=f"day{task['day']}"):
+                            st.success(f"+{task['xp']} XP Earned!")
+                            total_xp += task['xp']
+                    with colB:
+                        st.metric("XP", f"+{task['xp']}")
+
+            st.progress(total_xp/450, text=f"Course Progress: {total_xp}/450 XP")
+        else:
+            st.warning("AI returned text. Here's the roadmap:")
+            st.markdown(result)
