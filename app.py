@@ -10,12 +10,12 @@ st.set_page_config(page_title="AI Career OS PRO", layout="wide", page_icon="🚀
 
 st.markdown("""
 <style>
-  .block-container {padding-top: 1rem; padding-bottom: 1rem; padding-left: 1rem; padding-right: 1rem;}
-  .metric-card {background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 15px; color: white; text-align: center; margin-bottom: 10px;}
-  .metric-card h1 {font-size: 2.5rem; margin: 0;}
-  .skill-tag {display:inline-block; background-color:#4F46E5; color:white; padding: 8px 15px; border-radius: 20px; margin: 5px 5px 5px 0; font-weight: 500; font-size: 14px;}
-  .gap-tag {display:inline-block; background-color:#EF4444; color:white; padding: 8px 15px; border-radius: 20px; margin: 5px 5px 5px 0; font-weight: 500; font-size: 14px;}
-  .stButton > button {width: 100%;}
+ .block-container {padding-top: 1rem; padding-bottom: 1rem; padding-left: 1rem; padding-right: 1rem;}
+ .metric-card {background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 15px; color: white; text-align: center; margin-bottom: 10px;}
+ .metric-card h1 {font-size: 2.5rem; margin: 0;}
+ .skill-tag {display:inline-block; background-color:#4F46E5; color:white; padding: 8px 15px; border-radius: 20px; margin: 5px 5px 5px 0; font-weight: 500; font-size: 14px;}
+ .gap-tag {display:inline-block; background-color:#EF4444; color:white; padding: 8px 15px; border-radius: 20px; margin: 5px 5px 5px 0; font-weight: 500; font-size: 14px;}
+ .stButton > button {width: 100%;}
 </style>
 """, unsafe_allow_html=True)
 
@@ -48,11 +48,12 @@ if 'resume_text' not in st.session_state: st.session_state.resume_text = ""
 if 'qs' not in st.session_state: st.session_state.qs = ""
 
 with st.sidebar:
-    st.title("🚀 AI Career OS PRO v11.1")
+    st.title("🚀 AI Career OS PRO v11.2")
     page = st.radio("Select Module", [
         "🏠 Dashboard","🧠 AI Doubt Clear","💼 Live Mock Interview","🔎 AI Job + Course Finder",
         "💻 Code + SQL Lab","🎯 Project Generator","📊 Skill Gap Analyzer","🎮 Daily Challenge",
-        "🔥 Motivation Dose","📈 Salary Calculator","📚 7-Day Course Quest"
+        "🔥 Motivation Dose","📈 Salary Calculator","📚 7-Day Course Quest",
+        "🚀 1-Click Apply + Refer Kit" # PUDHU MODULE
     ])
     st.divider()
     st.header("Step 1: Upload Resume")
@@ -162,3 +163,66 @@ elif page == "📚 7-Day Course Quest":
                     with colB: st.metric("XP", f"+{task['xp']}")
             st.progress(total_xp/450, text=f"Course Progress: {total_xp}/450 XP")
         else: st.warning("AI returned text."); st.markdown(result)
+
+elif page == "🚀 1-Click Apply + Refer Kit":
+    st.title("🚀 1-Click Apply + Refer Kit")
+    st.caption("Job link 1 paste panu. Resume + Post + DM ellam 10 sec la ready")
+    st.info("⚠️ LinkedIn ban varadha iruka naama auto post pannala. Copy panni neeye paste paniko. 100% Safe")
+
+    if st.session_state.resume_text == "":
+        st.warning("👈 Mela resume upload pannitu va da")
+    else:
+        job_link = st.text_input("Job Link Paste Panu", placeholder="https://linkedin.com/jobs/view/12345")
+
+        if st.button("Generate My Apply Kit", type="primary") and job_link:
+
+            prompt = f"""
+            You are an expert HR + LinkedIn Growth Hacker.
+            Your job is to help this candidate get REFERRED.
+
+            CANDIDATE RESUME:
+            {st.session_state.resume_text[:4000]}
+
+            TARGET JOB LINK:
+            {job_link}
+
+            DO 4 TASKS AND RETURN ONLY JSON:
+            1. "ats_bullets": Give 3 resume bullet points tailored to this JD. Use action verbs + numbers + JD keywords.
+            2. "linkedin_post": Write 1 LinkedIn post. Confident. 100 words max. 3 hashtags. Tag company.
+            3. "referral_dm": Write 3-line DM to send to Hiring Manager for referral. Professional + short.
+            4. "keywords": Top 5 keywords from JD to add in resume.
+
+            FORMAT MUST BE VALID JSON ONLY.
+            """
+
+            result = ask_ai(prompt)
+            data = extract_json(result)
+
+            if data:
+                st.success("✅ Your Apply Kit is Ready!")
+                st.divider()
+
+                tab1, tab2, tab3, tab4 = st.tabs(["📄 ATS Bullets", "📢 LinkedIn Post", "💌 Referral DM", "🔑 Keywords"])
+
+                with tab1:
+                    st.subheader("Copy these to your resume")
+                    for bullet in data.get('ats_bullets', []):
+                        st.code(f"• {bullet}")
+                    st.download_button("Download Bullets.txt", "\n".join(data.get('ats_bullets', [])), "ats_bullets.txt")
+
+                with tab2:
+                    st.subheader("Copy and Post on LinkedIn")
+                    st.text_area("LinkedIn Post", data.get('linkedin_post', ''), height=200)
+
+                with tab3:
+                    st.subheader("Send this DM to Manager/HR")
+                    st.text_area("Referral DM", data.get('referral_dm', ''), height=150)
+                    st.warning("Step 1: Find Manager on LinkedIn. Step 2: Send this DM")
+
+                with tab4:
+                    st.subheader("Add these 5 keywords to resume")
+                    for kw in data.get('keywords', []):
+                        st.markdown(f'<span class="skill-tag">{kw}</span>', unsafe_allow_html=True)
+            else:
+                st.error("AI JSON format la tharala. Idhu try panu:")
+                st.markdown(result)
