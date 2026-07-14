@@ -1,4 +1,3 @@
-# FULL CODE V11.1 - COPY THIS FULL
 import streamlit as st
 from groq import Groq
 import pdfplumber
@@ -62,5 +61,104 @@ with st.sidebar:
         st.session_state.resume_text = read_pdf(resume_file)
         st.success("✅ Resume Loaded")
 
-#...BAKI ELLA 11 MODULE CODE MUM APDIYEE IRUKUM...
-# NAAN FULL CODE ANUPITEN. MELA IRUKURA CODE BLOCK LA COPY BUTTON IRUKUM
+if page == "🏠 Dashboard":
+    st.title("AI Career Command Center")
+    if st.session_state.resume_text == "":
+        st.info("👈 Left la resume upload pannu")
+        if st.button("Load Demo Data"):
+            st.session_state.resume_text = "Aspiring Design Engineer. Skills: Autocad 2D, Tekla Structures, STADD.pro"
+    else:
+        if st.button("🚀 Analyze My Resume with AI", type="primary"):
+            prompt = f"""You are an expert AI Career Coach. Return ONLY JSON with keys: "ats_score", "top_3_skills", "top_3_gaps", "summary". RESUME: {st.session_state.resume_text[:4000]}"""
+            result = ask_ai(prompt)
+            data = extract_json(result)
+            if data:
+                col1, col2 = st.columns(2)
+                with col1: st.markdown(f'<div class="metric-card"><h3>ATS Score</h3><h1>{data.get("ats_score",0)}/100</h1></div>', unsafe_allow_html=True)
+                with col2: st.markdown(f'<div class="metric-card"><h3>Gap to Close</h3><h1>{100-data.get("ats_score",0)}%</h1></div>', unsafe_allow_html=True)
+                st.progress(data.get('ats_score',0)/100)
+                st.subheader("✅ Your Top Skills")
+                for skill in data.get('top_3_skills',[]): st.markdown(f'<span class="skill-tag">{skill}</span>', unsafe_allow_html=True)
+                st.subheader("🚀 Skills to Learn")
+                for gap in data.get('top_3_gaps',[]): st.markdown(f'<span class="gap-tag">{gap}</span>', unsafe_allow_html=True)
+                with st.container(border=True): st.subheader("AI Summary"); st.info(data.get('summary',""))
+            else: st.warning("AI returned text format:"); st.markdown(result)
+
+elif page == "🧠 AI Doubt Clear":
+    st.title("🧠 Ask AI Anything")
+    doubt = st.text_area("Type your doubt here")
+    if st.button("Get Answer from AI") and doubt: st.markdown(ask_ai(f"Act as a senior tech mentor. Explain this clearly in Tamil + English mix with code example: {doubt}"))
+
+elif page == "💼 Live Mock Interview":
+    st.title("💼 AI Live Mock Interview")
+    role = st.selectbox("Select Job Role", ["Data Analyst", "Civil Engineer", "Python Developer"])
+    if st.button("Generate 5 Questions"): st.session_state.qs = ask_ai(f"Generate 5 tough interview questions for {role} role based on this resume: {st.session_state.resume_text[:3000]}"); st.write(st.session_state.qs)
+    ans = st.text_area("Type your answer here", height=200)
+    if st.button("Get AI Score + Feedback") and ans: st.success(ask_ai(f"You are an HR. Question: {st.session_state.get('qs','N/A')}. My Answer: {ans}. Give score out of 10, 3 feedback points."))
+
+elif page == "🔎 AI Job + Course Finder":
+    st.title("🔎 AI Job + Course Finder")
+    search = st.text_input("What do you want? Ex: 'Civil Engineer jobs in Chennai'")
+    if st.button("Search with AI") and search: st.markdown(ask_ai(f"Find 5 real job roles and 3 best free YouTube courses for: {search}."))
+
+elif page == "💻 Code + SQL Lab":
+    st.title("💻 Practice Code Here")
+    lang = st.selectbox("Language", ["SQL", "Python"])
+    code = st.text_area("Paste your code")
+    if st.button("Explain Code") and code: exp = ask_ai(f"Explain this {lang} code line by line for a beginner: {code}"); st.code(code, language=lang.lower()); st.info(exp)
+
+elif page == "🎯 Project Generator":
+    st.title("🎯 AI Project Ideas for Resume")
+    if st.button("Generate 3 Resume Projects"): st.markdown(ask_ai(f"Generate 3 unique resume projects for this person. Give Name, Tech Stack, 3 bullet points: {st.session_state.resume_text[:3000]}"))
+
+elif page == "📊 Skill Gap Analyzer":
+    st.title("📊 Skill Gap Analyzer")
+    job = st.text_input("Target Job: Ex: 'Project Manager'")
+    if st.button("Analyze My Gap") and job: st.markdown(ask_ai(f"Compare this resume vs {job} job. List missing skills and give 30 day learning roadmap: {st.session_state.resume_text[:3000]}"))
+
+elif page == "🎮 Daily Challenge":
+    st.title("🎮 Daily Career Quest")
+    challenges = ["Update 1 bullet point in your resume with a number.","Learn 1 new SQL query and test it","Connect with 1 person on LinkedIn","Watch 10 min of a PowerBI tutorial","Rewrite your LinkedIn Headline"]
+    with st.container(border=True): st.subheader("Today's Mission"); st.info(f"🔥 {random.choice(challenges)}");
+    if st.checkbox("I Completed This!"): st.success("Congrats! +50 XP Earned"); st.balloons()
+    st.progress(0.65, text="Level 5: Career Grinder - 650 XP")
+
+elif page == "🔥 Motivation Dose":
+    st.title("🔥 AI Motivation + Meme Generator")
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Give Me Motivation 💪"): st.success(ask_ai("Give 1 line hardcore motivation for a job seeker in Tamil + English mix"))
+    with col2:
+        if st.button("Give Me a Career Meme 😂"): st.warning(ask_ai("Give 1 funny career meme line about 'resume rejection' in Tamil + English mix"))
+
+elif page == "📈 Salary Calculator":
+    st.title("📈 'What If' Salary Calculator")
+    current_salary = st.number_input("Enter Current Salary in LPA", value=4.0, step=0.5)
+    skill = st.selectbox("If I learn this skill", ["PowerBI", "Machine Learning", "Cloud AWS", "Project Management", "Revit"])
+    if st.button("Calculate My New Salary"): st.metric("AI Prediction", ask_ai(f"If a Civil Engineer with {current_salary} LPA salary learns {skill}, what is the average salary hike % in India 2026? Give answer in 1 line with new salary."))
+
+elif page == "📚 7-Day Course Quest":
+    st.title("📚 7-Day Course Quest")
+    course = st.selectbox("Choose Your Course", ["PowerBI for Beginners","Python for Data Analysis","SQL Mastery","Revit Architecture Basics","Project Management with MS Project"])
+    if st.button("Generate My 7-Day Roadmap", type="primary"):
+        prompt = f"""You are an expert Course Designer. Return ONLY JSON with keys: "overview", "tools", "project", "tasks". tasks must be 7 items with day, task, xp. Course: {course}"""
+        data = extract_json(ask_ai(prompt))
+        if data:
+            st.success(f"Roadmap Generated for: {course}")
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                with st.container(border=True): st.subheader("🎯 What You'll Learn"); st.write(data.get("overview"))
+            with col2:
+                with st.container(border=True): st.subheader("🛠️ Tools Used"); [st.markdown(f'- {tool}') for tool in data.get("tools",[])]
+            with col3:
+                with st.container(border=True): st.subheader("🏆 Final Project"); st.write(data.get("project"))
+            st.divider(); st.subheader("🗓️ Your 7 Day Task List")
+            total_xp = 0
+            for task in data.get("tasks", []):
+                with st.container(border=True):
+                    colA, colB = st.columns([0.8, 0.2])
+                    with colA: st.markdown(f"**Day {task['day']}:** {task['task']}");
+                    if st.checkbox(f"Mark Day {task['day']} Complete", key=f"day{task['day']}"): st.success(f"+{task['xp']} XP Earned!"); total_xp += task['xp']
+                    with colB: st.metric("XP", f"+{task['xp']}")
+            st.progress(total_xp/450, text=f"Course Progress: {total_xp}/450 XP")
+        else: st.warning("AI returned text."); st.markdown(result)
